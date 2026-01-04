@@ -7,10 +7,11 @@ lua54 'yes'
 name 'sal_craftingframework'
 version '1.0.0'
 
-ui_page 'ui/index.html'
+ui_page 'ui/dist/index.html'
 
 files {
-  'ui/index.html',
+  'ui/dist/index.html',
+  'ui/dist/assets/*',
   'ui/package.json',
   'ui/postcss.config.mjs',
   'ui/vite.config.ts',
