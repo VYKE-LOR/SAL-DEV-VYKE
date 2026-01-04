@@ -80,6 +80,7 @@ RegisterNetEvent('sal_crafting:server:open', function(benchContext)
   TriggerClientEvent('sal_crafting:client:open', source, {
     token = token,
     bench = bench,
+    admin = benchContext and benchContext.admin or false,
     player = {
       identifier = identifier,
       level = level,

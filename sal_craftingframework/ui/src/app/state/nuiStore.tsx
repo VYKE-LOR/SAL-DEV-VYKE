@@ -17,6 +17,7 @@ type NuiState = {
   snapshot: Snapshot;
   bench?: any;
   player?: any;
+  admin?: boolean;
 };
 
 type NuiActions = {
@@ -68,6 +69,7 @@ export const NuiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   useEffect(() => {
+    fetchNui('ui_ready', {});
     const handler = (event: MessageEvent) => {
       const { action, data } = event.data || {};
       if (!action) return;
@@ -79,9 +81,9 @@ export const NuiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           token: data.token,
           bench: data.bench,
           player: data.player,
+          admin: data.admin,
           snapshot: { ...prev.snapshot, ...(data.snapshot || {}) },
         }));
-        fetchNui('ui_ready', { token: data.token });
       }
 
       if (action === 'sal_crafting:updateSnapshot') {

@@ -47,9 +47,9 @@ export default function App() {
 
   useEffect(() => {
     if (state.open) {
-      setCurrentFrame('cw_player_crafting_1920');
+      setCurrentFrame(state.admin ? 'ad_admin_dashboard_1920' : 'cw_player_crafting_1920');
     }
-  }, [state.open]);
+  }, [state.open, state.admin]);
 
   const renderFrame = () => {
     switch (currentFrame) {

@@ -3,7 +3,7 @@ local Nui = require('client/nui')
 local Targeting = require('client/target')
 
 RegisterNetEvent('sal_crafting:client:open', function(payload)
-  State.SetOpen(true, payload.token, payload.player, payload.bench)
+  State.SetOpen(true, payload.token, payload.player, payload.bench, payload.admin)
   SetNuiFocus(true, true)
   SendNUIMessage({
     action = 'sal_crafting:open',
@@ -11,6 +11,7 @@ RegisterNetEvent('sal_crafting:client:open', function(payload)
       token = payload.token,
       player = payload.player,
       bench = payload.bench,
+      admin = payload.admin,
       snapshot = State.GetSnapshot(),
     }
   })

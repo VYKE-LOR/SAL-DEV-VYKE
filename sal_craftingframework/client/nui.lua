@@ -8,8 +8,30 @@ local function sendNui(name, payload)
   })
 end
 
+local function sendOpenFromState()
+  if not State.IsOpen() then
+    return
+  end
+  SendNUIMessage({
+    action = 'sal_crafting:open',
+    data = {
+      token = State.token,
+      player = State.player,
+      bench = State.bench,
+      admin = State.IsAdmin(),
+      snapshot = State.GetSnapshot(),
+    }
+  })
+end
+
 RegisterNUICallback(Types.NuiCallbacks.Ready, function(data, cb)
-  TriggerServerEvent('sal_crafting:server:request_snapshot', data.token)
+  if not data.token and State.token then
+    sendOpenFromState()
+  end
+  local token = data.token or State.token
+  if token then
+    TriggerServerEvent('sal_crafting:server:request_snapshot', token)
+  end
   cb({ ok = true })
 end)
 
