@@ -16,20 +16,13 @@ files {
   'ui/vite.config.ts',
   'ui/src/**/*',
   'ui/**/*.css',
-  'ui/**/*.js',
   'ui/**/*.ts',
   'ui/**/*.tsx',
-  'ui/**/*.json',
-  'ui/**/*.svg',
-  'ui/**/*.png',
-  'ui/**/*.jpg',
-  'ui/**/*.webp',
-  'ui/**/*.woff',
-  'ui/**/*.woff2',
-  'ui/**/*.ttf'
+  'ui/**/*.json'
 }
 
 shared_scripts {
+  'shared/init.lua',
   'config/config.lua',
   'shared/util.lua',
   'shared/types.lua'
@@ -49,6 +42,7 @@ server_scripts {
   'bridge/mysql.lua',
   'bridge/framework.lua',
   'bridge/inventory.lua',
+  'shared/init.lua',
   'shared/util.lua',
   'shared/types.lua',
   'server/cache.lua',
