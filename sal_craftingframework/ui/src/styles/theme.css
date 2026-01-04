@@ -1,0 +1,128 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Requested Colors */
+  --bg-dark: #0E0B14;
+  --surface-1: #171329;
+  --surface-2: #1C1633;
+  --border-color: #2A2250;
+  --text-primary: #F4F1FF;
+  --text-secondary: #B8B1D9;
+  --text-muted: #7E78A6;
+  --accent-purple: #7A2FFB;
+  --accent-pink: #FF4FD8;
+  --status-success: #3BFFB3;
+  --status-warning: #FFC04D;
+  --status-error: #FF4D6D;
+
+  /* Shadcn Mappings */
+  --background: var(--bg-dark);
+  --foreground: var(--text-primary);
+  
+  --card: var(--surface-1);
+  --card-foreground: var(--text-primary);
+  
+  --popover: var(--surface-2);
+  --popover-foreground: var(--text-primary);
+  
+  --primary: var(--accent-purple);
+  --primary-foreground: #ffffff;
+  
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--text-secondary);
+  
+  --muted: var(--surface-1);
+  --muted-foreground: var(--text-muted);
+  
+  --accent: var(--accent-pink);
+  --accent-foreground: #ffffff;
+  
+  --destructive: var(--status-error);
+  --destructive-foreground: #ffffff;
+  
+  --border: var(--border-color);
+  --input: var(--border-color);
+  --ring: var(--accent-purple);
+  
+  --radius: 16px; /* 16px cards as requested */
+
+  --font-sans: "Inter", sans-serif;
+}
+
+.dark {
+  /* Same as root since we are forcing dark mode look */
+  --background: var(--bg-dark);
+  --foreground: var(--text-primary);
+  --card: var(--surface-1);
+  --card-foreground: var(--text-primary);
+  --popover: var(--surface-2);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--accent-purple);
+  --primary-foreground: #ffffff;
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--text-secondary);
+  --muted: var(--surface-1);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--accent-pink);
+  --accent-foreground: #ffffff;
+  --destructive: var(--status-error);
+  --destructive-foreground: #ffffff;
+  --border: var(--border-color);
+  --input: var(--border-color);
+  --ring: var(--accent-purple);
+}
+
+@theme inline {
+  --font-sans: var(--font-sans);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Custom Colors for specific usage */
+  --color-cw-bg: var(--bg-dark);
+  --color-cw-surface-1: var(--surface-1);
+  --color-cw-surface-2: var(--surface-2);
+  --color-cw-border: var(--border-color);
+  --color-cw-text-primary: var(--text-primary);
+  --color-cw-text-secondary: var(--text-secondary);
+  --color-cw-text-muted: var(--text-muted);
+  --color-cw-primary: var(--accent-purple);
+  --color-cw-secondary: var(--accent-pink);
+  --color-cw-success: var(--status-success);
+  --color-cw-warning: var(--status-warning);
+  --color-cw-error: var(--status-error);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
