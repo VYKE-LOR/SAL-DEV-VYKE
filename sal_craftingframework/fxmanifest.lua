@@ -31,6 +31,7 @@ shared_scripts {
 client_scripts {
   'bridge/framework.lua',
   'bridge/target.lua',
+  'shared/init.lua',
   'client/state.lua',
   'client/nui.lua',
   'client/target.lua',
