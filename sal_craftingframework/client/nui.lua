@@ -25,6 +25,10 @@ local function sendOpenFromState()
 end
 
 RegisterNUICallback(Types.NuiCallbacks.Ready, function(data, cb)
+  State.SetNuiReady(true)
+  if State.IsOpen() then
+    SetNuiFocus(true, true)
+  end
   if not data.token and State.token then
     sendOpenFromState()
   end
@@ -123,6 +127,7 @@ end)
 RegisterNUICallback('close', function(data, cb)
   SetNuiFocus(false, false)
   State.SetOpen(false)
+  State.SetNuiReady(false)
   TriggerServerEvent('sal_crafting:server:close')
   cb({ ok = true })
 end)

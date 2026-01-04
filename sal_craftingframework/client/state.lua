@@ -5,6 +5,7 @@ local State = {
   player = nil,
   bench = nil,
   admin = false,
+  nuiReady = false,
 }
 
 function State.SetOpen(value, token, player, bench, admin)
@@ -29,6 +30,14 @@ end
 
 function State.IsAdmin()
   return State.admin
+end
+
+function State.SetNuiReady(value)
+  State.nuiReady = value
+end
+
+function State.IsNuiReady()
+  return State.nuiReady
 end
 
 return State

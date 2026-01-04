@@ -4,17 +4,26 @@ local Targeting = require('client/target')
 
 RegisterNetEvent('sal_crafting:client:open', function(payload)
   State.SetOpen(true, payload.token, payload.player, payload.bench, payload.admin)
-  SetNuiFocus(true, true)
-  SendNUIMessage({
-    action = 'sal_crafting:open',
-    data = {
-      token = payload.token,
-      player = payload.player,
-      bench = payload.bench,
-      admin = payload.admin,
-      snapshot = State.GetSnapshot(),
-    }
-  })
+  if State.IsNuiReady() then
+    SetNuiFocus(true, true)
+    SendNUIMessage({
+      action = 'sal_crafting:open',
+      data = {
+        token = payload.token,
+        player = payload.player,
+        bench = payload.bench,
+        admin = payload.admin,
+        snapshot = State.GetSnapshot(),
+      }
+    })
+  else
+    SetTimeout(5000, function()
+      if State.IsOpen() and not State.IsNuiReady() then
+        SetNuiFocus(false, false)
+        State.SetOpen(false)
+      end
+    end)
+  end
 end)
 
 RegisterNetEvent('sal_crafting:client:snapshot', function(snapshot)
