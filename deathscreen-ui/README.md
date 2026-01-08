@@ -1,11 +1,25 @@
+# San Andreas Legacy - Loadingscreen
 
-  # Modern FiveM Loading Screen UI
+Performanter FiveM Loadingscreen basierend auf dem Figma-Design.
 
-  This is a code bundle for Modern FiveM Loading Screen UI. The original project is available at https://www.figma.com/design/Y1MPpxPJ7QFR2wmQXx72i5/Modern-FiveM-Loading-Screen-UI.
+## Installation
 
-  ## Running the code
+1. Ordner `deathscreen-ui` in deinen `resources`-Ordner legen (du kannst ihn z. B. in `sal_loadingscreen` umbenennen).
+2. In der `server.cfg` sicherstellen, dass die Resource gestartet wird:
+   ```cfg
+   ensure deathscreen-ui
+   ```
+3. Optional (empfohlen) den Busy-Spinner deaktivieren:
+   ```cfg
+   setr sv_showBusySpinnerOnLoadingScreen false
+   ```
 
-  Run `npm i` to install the dependencies.
+## Assets ersetzen
 
-  Run `npm run dev` to start the development server.
-  
+- Video: `html/assets/video/background.mp4`
+- Audio: `html/assets/audio/loading.ogg`
+
+## Hinweise
+
+- Cursor ist während des Loadingscreens aktiv (`loadscreen_cursor 'yes'`).
+- Das Beenden des Loadingscreens wird manuell im `client.lua` gesteuert.
