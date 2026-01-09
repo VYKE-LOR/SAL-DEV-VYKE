@@ -92,6 +92,32 @@ const tryUnmuteWithRetries = (attempts = 2) => {
   }
 };
 
+const scheduleUnmuteAttempts = () => {
+  tryUnmuteWithRetries(2);
+};
+
+const setupAutoplayBoost = () => {
+  const tryOnInteraction = () => {
+    scheduleUnmuteAttempts();
+    window.removeEventListener('mousemove', tryOnInteraction);
+    window.removeEventListener('touchstart', tryOnInteraction);
+    window.removeEventListener('pointerdown', tryOnInteraction);
+    window.removeEventListener('keydown', tryOnInteraction);
+  };
+
+  window.addEventListener('focus', scheduleUnmuteAttempts);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      scheduleUnmuteAttempts();
+    }
+  });
+
+  window.addEventListener('mousemove', tryOnInteraction);
+  window.addEventListener('touchstart', tryOnInteraction);
+  window.addEventListener('pointerdown', tryOnInteraction);
+  window.addEventListener('keydown', tryOnInteraction);
+};
+
 const animateProgress = () => {
   currentProgress += (targetProgress - currentProgress) * 0.12;
   const display = clamp(currentProgress, 0, 1);
@@ -136,4 +162,5 @@ volumeToggle.addEventListener('click', () => {
 restoreVolume();
 tryPlayAudio();
 setTimeout(() => tryUnmuteWithRetries(2), 500);
+setupAutoplayBoost();
 requestAnimationFrame(animateProgress);
