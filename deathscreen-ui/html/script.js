@@ -93,6 +93,26 @@ const tryUnmuteWithRetries = (attempts = 2) => {
   }
 };
 
+const tryPlayVideo = () => {
+  const playPromise = video.play();
+  if (playPromise && typeof playPromise.catch === 'function') {
+    playPromise.catch(() => {});
+  }
+};
+
+const setupMediaReadyHandlers = () => {
+  audio.addEventListener('canplaythrough', () => {
+    if (Number.parseFloat(volumeRange.value) > 0) {
+      audio.muted = false;
+    }
+    tryPlayAudio();
+  });
+
+  video.addEventListener('canplay', () => {
+    tryPlayVideo();
+  });
+};
+
 const scheduleUnmuteAttempts = () => {
   tryUnmuteWithRetries(2);
 };
@@ -163,6 +183,8 @@ volumeToggle.addEventListener('click', () => {
 
 restoreVolume();
 tryPlayAudio();
+tryPlayVideo();
+setupMediaReadyHandlers();
 setTimeout(() => tryUnmuteWithRetries(2), 500);
 setupAutoplayBoost();
 requestAnimationFrame(animateProgress);
