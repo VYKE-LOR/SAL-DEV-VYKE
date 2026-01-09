@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>San Andreas Legacy - Loading</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="loading-screen" class="loading-screen">
+      <video id="bg-video" class="bg-video" autoplay loop muted playsinline preload="auto">
+        <source src="assets/video/background.mp4" type="video/mp4" />
+      </video>
+      <audio id="bgm" autoplay loop muted preload="auto" src="assets/audio/loading.ogg"></audio>
+
+      <div class="overlay overlay-gradient"></div>
+      <div class="overlay overlay-noise"></div>
+
+      <div class="neon-layer">
+        <div class="neon-line neon-line-top"></div>
+        <div class="neon-line neon-line-bottom"></div>
+        <div class="neon-blob neon-blob-pink"></div>
+        <div class="neon-blob neon-blob-purple"></div>
+        <div class="neon-particles">
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+
+      <div class="ui">
+        <header class="branding">
+          <div class="logo">
+            <span>SA</span>
+          </div>
+          <div class="branding-text">
+            <h1>San Andreas <span>Legacy</span></h1>
+            <div class="branding-line"></div>
+          </div>
+        </header>
+
+        <main class="center">
+          <div class="status">
+            <div id="status-text" class="status-text status-animate">Lade Ressourcen...</div>
+          </div>
+          <div class="progress-wrapper">
+            <div class="progress-bar">
+              <div id="progress-fill" class="progress-fill">
+                <div class="progress-shimmer"></div>
+              </div>
+              <div id="progress-glow" class="progress-glow"></div>
+            </div>
+            <div class="progress-info">
+              <div class="progress-hint">Synchronisiert mit deinem Ladefortschritt</div>
+              <div class="progress-percent">
+                <span id="progress-percent">0%</span>
+                <div class="percent-glow"></div>
+              </div>
+            </div>
+          </div>
+        </main>
+
+        <footer class="footer">
+          <div class="socials">
+            <a href="https://discord.gg/sa-legacy" target="_blank" rel="noopener noreferrer" class="social">
+              <div class="social-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20.2 4.8a16 16 0 0 0-4-1.2l-.2.4a12.4 12.4 0 0 1 3.6 1.4 13.8 13.8 0 0 0-6.2-1.6 13.8 13.8 0 0 0-6.2 1.6 12.4 12.4 0 0 1 3.6-1.4l-.2-.4a16 16 0 0 0-4 1.2C3.7 9 3 13.3 3.2 17.5a16.8 16.8 0 0 0 5 2.6l.6-.9a10.8 10.8 0 0 1-1.6-.8l.4-.3a12.3 12.3 0 0 0 4.4.9c1.5 0 3-.3 4.4-.9l.4.3a10.8 10.8 0 0 1-1.6.8l.6.9a16.8 16.8 0 0 0 5-2.6c.3-4.2-.4-8.5-2.2-12.7ZM9.4 14.7c-.8 0-1.4-.7-1.4-1.5s.6-1.5 1.4-1.5 1.4.7 1.4 1.5-.6 1.5-1.4 1.5Zm5.2 0c-.8 0-1.4-.7-1.4-1.5s.6-1.5 1.4-1.5 1.4.7 1.4 1.5-.6 1.5-1.4 1.5Z" />
+                </svg>
+              </div>
+              <div class="social-text">
+                <span>Discord</span>
+                <strong>discord.gg/sa-legacy</strong>
+              </div>
+            </a>
+            <a href="https://www.tiktok.com/@sanandreas_legacy" target="_blank" rel="noopener noreferrer" class="social">
+              <div class="social-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M15 4v10.1a3.4 3.4 0 1 1-2.1-3.1V8.4c-.3 0-.6-.1-.9-.1a5.2 5.2 0 1 0 5.2 5.2V7.1c.9.7 2 1.1 3.2 1.2V6.1A5.2 5.2 0 0 1 15 4Z" />
+                </svg>
+              </div>
+              <div class="social-text">
+                <span>TikTok</span>
+                <strong>@sanandreas_legacy</strong>
+              </div>
+            </a>
+          </div>
+
+          <div class="footer-center">San Andreas Legacy © 2026</div>
+
+          <div class="volume">
+            <div class="volume-controls">
+              <button id="volume-toggle" class="volume-btn" type="button" aria-label="Volume">
+                <svg id="volume-high" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 9v6h4l5 4V5L7 9H3Zm13 3c0-1.8-1-3.3-2.5-4v8c1.5-.7 2.5-2.2 2.5-4Zm2.5 0c0 3-1.7 5.6-4.2 6.9v-2.2c1.4-.9 2.2-2.3 2.2-4.7s-.8-3.8-2.2-4.7V5.1c2.5 1.3 4.2 4 4.2 6.9Z" />
+                </svg>
+                <svg id="volume-low" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 9v6h4l5 4V5L7 9H3Zm13 3c0-1.8-1-3.3-2.5-4v8c1.5-.7 2.5-2.2 2.5-4Z" />
+                </svg>
+                <svg id="volume-mute" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 9v6h4l5 4V5L7 9H3Zm13.5 3 3.5 3.5-1.5 1.5-3.5-3.5-3.5 3.5-1.5-1.5 3.5-3.5-3.5-3.5 1.5-1.5 3.5 3.5 3.5-3.5 1.5 1.5-3.5 3.5Z" />
+                </svg>
+              </button>
+              <div class="volume-slider">
+                <input id="volume-range" type="range" min="0" max="100" value="15" />
+              </div>
+              <div id="volume-value" class="volume-value">15%</div>
+            </div>
+          </div>
+        </footer>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
