@@ -1,14 +1,5 @@
-const statusMessages = [
-  'Lade Ressourcen...',
-  'Synchronisiere Daten...',
-  'Verbinde mit Server...',
-  'Lädt Spielwelt...',
-  'Fast fertig...'
-];
-
 const volumeStorageKey = 'sal_loading_volume';
 const loadingScreen = document.getElementById('loading-screen');
-const statusText = document.getElementById('status-text');
 const progressFill = document.getElementById('progress-fill');
 const progressGlow = document.getElementById('progress-glow');
 const progressPercent = document.getElementById('progress-percent');
@@ -24,7 +15,6 @@ const video = document.getElementById('bg-video');
 let currentProgress = 0;
 let targetProgress = 0;
 let hasFinished = false;
-let statusIndex = 0;
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
@@ -78,15 +68,6 @@ const tryPlayAudio = () => {
   }
 };
 
-const cycleStatus = () => {
-  statusIndex = (statusIndex + 1) % statusMessages.length;
-  statusText.textContent = statusMessages[statusIndex];
-  statusText.classList.remove('status-animate');
-  void statusText.offsetWidth;
-  statusText.classList.add('status-animate');
-  setTimeout(cycleStatus, 3000);
-};
-
 const animateProgress = () => {
   currentProgress += (targetProgress - currentProgress) * 0.12;
   const display = clamp(currentProgress, 0, 1);
@@ -133,6 +114,4 @@ volumeToggle.addEventListener('click', () => {
 
 restoreVolume();
 tryPlayAudio();
-statusText.classList.add('status-animate');
-cycleStatus();
 requestAnimationFrame(animateProgress);
