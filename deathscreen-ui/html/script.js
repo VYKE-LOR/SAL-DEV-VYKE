@@ -10,6 +10,7 @@ const volumeHigh = document.getElementById('volume-high');
 const volumeLow = document.getElementById('volume-low');
 const volumeMute = document.getElementById('volume-mute');
 const video = document.getElementById('bg-video');
+const audio = document.getElementById('bgm');
 
 let currentProgress = 0;
 let targetProgress = 0;
@@ -35,7 +36,8 @@ const setVolume = (volumePercent) => {
   const clamped = clamp(volumePercent, 0, 100);
   volumeRange.value = clamped;
   volumeValue.textContent = `${Math.round(clamped)}%`;
-  video.volume = clamped / 100;
+  audio.volume = clamped / 100;
+  audio.muted = clamped === 0;
   updateVolumeIcon(Math.round(clamped));
   localStorage.setItem(volumeStorageKey, `${clamped}`);
 };
@@ -53,11 +55,18 @@ const restoreVolume = () => {
 };
 
 const tryPlayAudio = () => {
-  const playPromise = video.play();
+  const playPromise = audio.play();
   if (playPromise && typeof playPromise.catch === 'function') {
-    playPromise.catch(() => {
+    playPromise.then(() => {
+      if (Number.parseFloat(volumeRange.value) > 0) {
+        audio.muted = false;
+      }
+    }).catch(() => {
       const resumeAudio = () => {
-        video.play().catch(() => {});
+        audio.play().catch(() => {});
+        if (Number.parseFloat(volumeRange.value) > 0) {
+          audio.muted = false;
+        }
         window.removeEventListener('click', resumeAudio);
         window.removeEventListener('keydown', resumeAudio);
       };
@@ -65,6 +74,49 @@ const tryPlayAudio = () => {
       window.addEventListener('keydown', resumeAudio, { once: true });
     });
   }
+};
+
+const tryUnmuteWithRetries = (attempts = 2) => {
+  if (Number.parseFloat(volumeRange.value) <= 0) {
+    return;
+  }
+  audio.muted = false;
+  const playPromise = audio.play();
+  if (playPromise && typeof playPromise.catch === 'function') {
+    playPromise.catch(() => {
+      if (attempts <= 0) {
+        return;
+      }
+      audio.muted = true;
+      setTimeout(() => tryUnmuteWithRetries(attempts - 1), 800);
+    });
+  }
+};
+
+const scheduleUnmuteAttempts = () => {
+  tryUnmuteWithRetries(2);
+};
+
+const setupAutoplayBoost = () => {
+  const tryOnInteraction = () => {
+    scheduleUnmuteAttempts();
+    window.removeEventListener('mousemove', tryOnInteraction);
+    window.removeEventListener('touchstart', tryOnInteraction);
+    window.removeEventListener('pointerdown', tryOnInteraction);
+    window.removeEventListener('keydown', tryOnInteraction);
+  };
+
+  window.addEventListener('focus', scheduleUnmuteAttempts);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      scheduleUnmuteAttempts();
+    }
+  });
+
+  window.addEventListener('mousemove', tryOnInteraction);
+  window.addEventListener('touchstart', tryOnInteraction);
+  window.addEventListener('pointerdown', tryOnInteraction);
+  window.addEventListener('keydown', tryOnInteraction);
 };
 
 const animateProgress = () => {
@@ -91,6 +143,7 @@ window.addEventListener('message', (event) => {
     targetProgress = 1;
     loadingScreen.classList.add('is-fading');
     video.pause();
+    audio.pause();
   }
 });
 
@@ -110,4 +163,6 @@ volumeToggle.addEventListener('click', () => {
 
 restoreVolume();
 tryPlayAudio();
+setTimeout(() => tryUnmuteWithRetries(2), 500);
+setupAutoplayBoost();
 requestAnimationFrame(animateProgress);
