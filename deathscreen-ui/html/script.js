@@ -9,7 +9,6 @@ const volumeToggle = document.getElementById('volume-toggle');
 const volumeHigh = document.getElementById('volume-high');
 const volumeLow = document.getElementById('volume-low');
 const volumeMute = document.getElementById('volume-mute');
-const audio = document.getElementById('bgm');
 const video = document.getElementById('bg-video');
 
 let currentProgress = 0;
@@ -36,7 +35,7 @@ const setVolume = (volumePercent) => {
   const clamped = clamp(volumePercent, 0, 100);
   volumeRange.value = clamped;
   volumeValue.textContent = `${Math.round(clamped)}%`;
-  audio.volume = clamped / 100;
+  video.volume = clamped / 100;
   updateVolumeIcon(Math.round(clamped));
   localStorage.setItem(volumeStorageKey, `${clamped}`);
 };
@@ -54,11 +53,11 @@ const restoreVolume = () => {
 };
 
 const tryPlayAudio = () => {
-  const playPromise = audio.play();
+  const playPromise = video.play();
   if (playPromise && typeof playPromise.catch === 'function') {
     playPromise.catch(() => {
       const resumeAudio = () => {
-        audio.play().catch(() => {});
+        video.play().catch(() => {});
         window.removeEventListener('click', resumeAudio);
         window.removeEventListener('keydown', resumeAudio);
       };
@@ -91,10 +90,7 @@ window.addEventListener('message', (event) => {
     hasFinished = true;
     targetProgress = 1;
     loadingScreen.classList.add('is-fading');
-    audio.pause();
-    if (video) {
-      video.pause();
-    }
+    video.pause();
   }
 });
 
