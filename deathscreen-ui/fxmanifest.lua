@@ -10,7 +10,8 @@ files {
   'html/index.html',
   'html/styles.css',
   'html/script.js',
-  'html/assets/video/background.mp4'
+  'html/assets/video/background.mp4',
+  'html/assets/audio/loading.ogg'
 }
 
 client_scripts {

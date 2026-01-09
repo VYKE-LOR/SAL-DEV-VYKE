@@ -10,6 +10,7 @@ const volumeHigh = document.getElementById('volume-high');
 const volumeLow = document.getElementById('volume-low');
 const volumeMute = document.getElementById('volume-mute');
 const video = document.getElementById('bg-video');
+const audio = document.getElementById('bgm');
 
 let currentProgress = 0;
 let targetProgress = 0;
@@ -35,8 +36,8 @@ const setVolume = (volumePercent) => {
   const clamped = clamp(volumePercent, 0, 100);
   volumeRange.value = clamped;
   volumeValue.textContent = `${Math.round(clamped)}%`;
-  video.volume = clamped / 100;
-  video.muted = clamped === 0;
+  audio.volume = clamped / 100;
+  audio.muted = clamped === 0;
   updateVolumeIcon(Math.round(clamped));
   localStorage.setItem(volumeStorageKey, `${clamped}`);
 };
@@ -54,17 +55,17 @@ const restoreVolume = () => {
 };
 
 const tryPlayAudio = () => {
-  const playPromise = video.play();
+  const playPromise = audio.play();
   if (playPromise && typeof playPromise.catch === 'function') {
     playPromise.then(() => {
       if (Number.parseFloat(volumeRange.value) > 0) {
-        video.muted = false;
+        audio.muted = false;
       }
     }).catch(() => {
       const resumeAudio = () => {
-        video.play().catch(() => {});
+        audio.play().catch(() => {});
         if (Number.parseFloat(volumeRange.value) > 0) {
-          video.muted = false;
+          audio.muted = false;
         }
         window.removeEventListener('click', resumeAudio);
         window.removeEventListener('keydown', resumeAudio);
@@ -79,14 +80,14 @@ const tryUnmuteWithRetries = (attempts = 2) => {
   if (Number.parseFloat(volumeRange.value) <= 0) {
     return;
   }
-  video.muted = false;
-  const playPromise = video.play();
+  audio.muted = false;
+  const playPromise = audio.play();
   if (playPromise && typeof playPromise.catch === 'function') {
     playPromise.catch(() => {
       if (attempts <= 0) {
         return;
       }
-      video.muted = true;
+      audio.muted = true;
       setTimeout(() => tryUnmuteWithRetries(attempts - 1), 800);
     });
   }
@@ -142,6 +143,7 @@ window.addEventListener('message', (event) => {
     targetProgress = 1;
     loadingScreen.classList.add('is-fading');
     video.pause();
+    audio.pause();
   }
 });
 

@@ -16,7 +16,8 @@ Performanter FiveM Loadingscreen basierend auf dem Figma-Design.
 
 ## Assets ersetzen
 
-- Video (inkl. Audio): `html/assets/video/background.mp4`
+- Video: `html/assets/video/background.mp4`
+- Audio: `html/assets/audio/loading.ogg`
 
 ## Hinweise
 
