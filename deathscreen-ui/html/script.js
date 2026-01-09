@@ -36,6 +36,7 @@ const setVolume = (volumePercent) => {
   volumeRange.value = clamped;
   volumeValue.textContent = `${Math.round(clamped)}%`;
   video.volume = clamped / 100;
+  video.muted = clamped === 0;
   updateVolumeIcon(Math.round(clamped));
   localStorage.setItem(volumeStorageKey, `${clamped}`);
 };
@@ -55,14 +56,38 @@ const restoreVolume = () => {
 const tryPlayAudio = () => {
   const playPromise = video.play();
   if (playPromise && typeof playPromise.catch === 'function') {
-    playPromise.catch(() => {
+    playPromise.then(() => {
+      if (Number.parseFloat(volumeRange.value) > 0) {
+        video.muted = false;
+      }
+    }).catch(() => {
       const resumeAudio = () => {
         video.play().catch(() => {});
+        if (Number.parseFloat(volumeRange.value) > 0) {
+          video.muted = false;
+        }
         window.removeEventListener('click', resumeAudio);
         window.removeEventListener('keydown', resumeAudio);
       };
       window.addEventListener('click', resumeAudio, { once: true });
       window.addEventListener('keydown', resumeAudio, { once: true });
+    });
+  }
+};
+
+const tryUnmuteWithRetries = (attempts = 2) => {
+  if (Number.parseFloat(volumeRange.value) <= 0) {
+    return;
+  }
+  video.muted = false;
+  const playPromise = video.play();
+  if (playPromise && typeof playPromise.catch === 'function') {
+    playPromise.catch(() => {
+      if (attempts <= 0) {
+        return;
+      }
+      video.muted = true;
+      setTimeout(() => tryUnmuteWithRetries(attempts - 1), 800);
     });
   }
 };
@@ -110,4 +135,5 @@ volumeToggle.addEventListener('click', () => {
 
 restoreVolume();
 tryPlayAudio();
+setTimeout(() => tryUnmuteWithRetries(2), 500);
 requestAnimationFrame(animateProgress);
