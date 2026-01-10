@@ -29,6 +29,7 @@ Edit `shared/config.lua`:
 - **Config.HistoryLimit**: number of alerts loaded on app open.
 - **Config.Sound**: xSound usage and volume.
 - **Config.Logging**: enable logs and debug output.
+- **Config.App.Icon**: app icon asset used by the phone and notifications.
 
 ## Sender Permissions
 

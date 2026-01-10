@@ -146,10 +146,10 @@ window.addEventListener('message', (event) => {
             }
             break;
         case 'alert:permissions':
-            updatePermissions(payload.data?.canSend);
+            updatePermissions(payload.data && payload.data.canSend);
             break;
         case 'alert:sendResult':
-            handleSendResult(payload.data?.success, payload.data?.reason);
+            handleSendResult(payload.data && payload.data.success, payload.data && payload.data.reason);
             break;
         case 'sound:play':
             playSound(payload.data);

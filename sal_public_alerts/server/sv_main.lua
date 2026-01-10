@@ -1,5 +1,7 @@
 local ESX = exports['es_extended']:getSharedObject()
-local DB = require 'server.sv_db'
+local resourceName = GetCurrentResourceName()
+package.path = package.path .. (';@%s/server/?.lua'):format(resourceName)
+local DB = require 'sv_db'
 
 local senderRate = {}
 local lastGlobalSend = 0

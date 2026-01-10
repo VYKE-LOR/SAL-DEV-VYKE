@@ -7,7 +7,7 @@ Config.App = {
     Label = 'DESPS Public Alert',
     ShortName = 'Public Alert',
     Description = 'Offizielle Notfallmeldungen des Department of Emergency Services & Public Safety.',
-    Icon = 'fa-triangle-exclamation',
+    Icon = 'assets/desps_alert.png',
     FixBlur = true
 }
 
