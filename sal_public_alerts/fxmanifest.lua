@@ -25,9 +25,9 @@ server_scripts {
 
 files {
     'ui/index.html',
-    'ui/styles.css',
+    'ui/style.css',
     'ui/app.js',
-    'ui/assets/*',
+    'ui/icon.png',
     'ui/sounds/*'
 }
 
@@ -38,5 +38,6 @@ dependencies {
 }
 
 optional_dependencies {
+    'lb-nativeaudio',
     'xsound'
 }

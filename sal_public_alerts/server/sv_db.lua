@@ -1,29 +1,30 @@
-local DB = {}
+PublicAlertsDB = PublicAlertsDB or {}
 
-function DB.CreateAlert(payload)
-    return MySQL.insert.await([[INSERT INTO sal_alerts (title, message, severity, created_at, author_identifier)
-        VALUES (?, ?, ?, ?, ?)]],
+function PublicAlertsDB.CreateAlert(payload)
+    return MySQL.insert.await([[INSERT INTO sal_alerts (title, message, severity, category, created_at, created_by)
+        VALUES (?, ?, ?, ?, ?, ?)]],
         {
             payload.title,
             payload.message,
             payload.severity,
+            payload.category,
             payload.created_at,
-            payload.author_identifier
+            payload.created_by
         }
     )
 end
 
-function DB.FetchHistory(limit)
-    return MySQL.query.await([[SELECT id, title, message, severity, created_at, author_identifier
+function PublicAlertsDB.FetchFeed(limit, offset)
+    return MySQL.query.await([[SELECT id, title, message, severity, category, created_at, created_by
         FROM sal_alerts
         ORDER BY created_at DESC
-        LIMIT ?]],
-        { limit }
+        LIMIT ? OFFSET ?]],
+        { limit, offset }
     )
 end
 
-function DB.FetchAlertsAfter(lastSeenId)
-    return MySQL.query.await([[SELECT id, title, message, severity, created_at, author_identifier
+function PublicAlertsDB.FetchAlertsAfter(lastSeenId)
+    return MySQL.query.await([[SELECT id, title, message, severity, category, created_at, created_by
         FROM sal_alerts
         WHERE id > ?
         ORDER BY id ASC]],
@@ -31,7 +32,7 @@ function DB.FetchAlertsAfter(lastSeenId)
     )
 end
 
-function DB.GetLastSeen(identifier)
+function PublicAlertsDB.GetLastSeen(identifier)
     local rows = MySQL.query.await([[SELECT last_seen_alert_id FROM sal_alert_user_state WHERE identifier = ? LIMIT 1]], { identifier })
     if rows and rows[1] then
         return rows[1].last_seen_alert_id or 0
@@ -39,12 +40,10 @@ function DB.GetLastSeen(identifier)
     return 0
 end
 
-function DB.SetLastSeen(identifier, alertId)
+function PublicAlertsDB.SetLastSeen(identifier, alertId)
     MySQL.insert.await([[INSERT INTO sal_alert_user_state (identifier, last_seen_alert_id)
         VALUES (?, ?)
         ON DUPLICATE KEY UPDATE last_seen_alert_id = VALUES(last_seen_alert_id)]],
         { identifier, alertId }
     )
 end
-
-return DB

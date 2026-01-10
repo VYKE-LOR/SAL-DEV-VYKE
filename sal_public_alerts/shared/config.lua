@@ -7,7 +7,7 @@ Config.App = {
     Label = 'DESPS Public Alert',
     ShortName = 'Public Alert',
     Description = 'Offizielle Notfallmeldungen des Department of Emergency Services & Public Safety.',
-    Icon = 'assets/desps_alert.png',
+    Icon = 'ui/icon.png',
     FixBlur = true
 }
 
@@ -28,7 +28,9 @@ Config.Alert = {
     MessageMax = 600,
     DefaultSeverity = 'critical',
     DefaultExpiresHours = 48,
-    SeverityOptions = { 'critical', 'warning', 'info' }
+    SeverityOptions = { 'critical', 'warning', 'info' },
+    DefaultCategory = 'general',
+    Categories = { 'general', 'weather', 'fire', 'police', 'medical', 'test' }
 }
 
 Config.HistoryLimit = 25
@@ -36,6 +38,8 @@ Config.HistoryLimit = 25
 Config.OfflineReplayNotification = true
 
 Config.Sound = {
+    UseNativeAudio = true,
+    NativeAudioName = 'desps_critical_alarm',
     UseXSound = true,
     File = 'ui/sounds/alert.ogg',
     Volume = 0.8

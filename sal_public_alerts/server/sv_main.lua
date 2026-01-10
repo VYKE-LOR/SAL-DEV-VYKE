@@ -1,7 +1,8 @@
 local ESX = exports['es_extended']:getSharedObject()
-local resourceName = GetCurrentResourceName()
-local resourcePath = GetResourcePath(resourceName)
-local DB = assert(loadfile(('%s/server/sv_db.lua'):format(resourcePath)))()
+local DB = PublicAlertsDB
+if not DB then
+    error('PublicAlertsDB not loaded. Ensure server/sv_db.lua loads before sv_main.lua.')
+end
 
 local senderRate = {}
 local lastGlobalSend = 0
@@ -46,6 +47,7 @@ local function sanitizeAlert(data)
     local title = (data.title or ''):gsub('[\r\n]+', ' '):sub(1, Config.Alert.TitleMax)
     local message = (data.message or ''):sub(1, Config.Alert.MessageMax)
     local severity = tostring(data.severity or Config.Alert.DefaultSeverity)
+    local category = tostring(data.category or Config.Alert.DefaultCategory)
 
     if title == '' or message == '' then
         return nil, 'validation'
@@ -62,10 +64,22 @@ local function sanitizeAlert(data)
         severity = Config.Alert.DefaultSeverity
     end
 
+    local categoryAllowed = false
+    for _, entry in ipairs(Config.Alert.Categories) do
+        if entry == category then
+            categoryAllowed = true
+            break
+        end
+    end
+    if not categoryAllowed then
+        category = Config.Alert.DefaultCategory
+    end
+
     return {
         title = title,
         message = message,
-        severity = severity
+        severity = severity,
+        category = category
     }
 end
 
@@ -103,8 +117,9 @@ local function buildAlertPayload(xPlayer, alert)
         title = alert.title,
         message = alert.message,
         severity = alert.severity,
+        category = alert.category,
         created_at = os.time() * 1000,
-        author_identifier = xPlayer.getIdentifier()
+        created_by = xPlayer.getIdentifier()
     }
 end
 
@@ -134,9 +149,31 @@ local function sendAlertFromPlayer(xPlayer, data)
         title = alertPayload.title,
         message = alertPayload.message,
         severity = alertPayload.severity,
+        category = alertPayload.category,
         created_at = alertPayload.created_at,
-        author_identifier = alertPayload.author_identifier
+        created_by = alertPayload.created_by
     }
+
+    local iconUrl = ('https://cfx-nui-%s/ui/icon.png'):format(GetCurrentResourceName())
+    local notifyPayload = {
+        app = Config.App.Identifier,
+        title = 'Emergency Alert',
+        message = alert.title,
+        thumbnail = iconUrl
+    }
+
+    if exports['lb-phone'] and exports['lb-phone'].NotifyEveryone then
+        local ok, success, err = pcall(function()
+            return exports['lb-phone']:NotifyEveryone('all', notifyPayload)
+        end)
+        if not ok then
+            logMessage(('NotifyEveryone failed: %s'):format(success))
+        elseif success == false then
+            logMessage(('NotifyEveryone error: %s'):format(err or 'unknown'))
+        end
+    else
+        logMessage('NotifyEveryone export not available on lb-phone.')
+    end
 
     TriggerClientEvent('sal_public_alerts:newAlert', -1, alert)
 
@@ -174,9 +211,11 @@ RegisterNetEvent('sal_public_alerts:sendAlert', function(data)
     TriggerClientEvent('sal_public_alerts:sendResult', source, true)
 end)
 
-RegisterNetEvent('sal_public_alerts:fetchHistory', function()
+RegisterNetEvent('sal_public_alerts:fetchFeed', function(limit, offset)
     local src = source
-    local alerts = DB.FetchHistory(Config.HistoryLimit)
+    local safeLimit = math.min(tonumber(limit) or Config.HistoryLimit, Config.HistoryLimit)
+    local safeOffset = math.max(tonumber(offset) or 0, 0)
+    local alerts = DB.FetchFeed(safeLimit, safeOffset)
     TriggerClientEvent('sal_public_alerts:historyData', src, alerts)
 end)
 
@@ -247,8 +286,9 @@ RegisterCommand('alerttest', function(src)
         title = 'Test Alarm',
         message = 'Dies ist ein Testalarm.',
         severity = Config.Alert.DefaultSeverity,
+        category = Config.Alert.DefaultCategory,
         created_at = os.time() * 1000,
-        author_identifier = xPlayer.getIdentifier()
+        created_by = xPlayer.getIdentifier()
     }
 
     TriggerClientEvent('sal_public_alerts:newAlert', src, alert)

@@ -10,13 +10,15 @@ Custom lb-phone app for broadcasting official emergency alerts to all players.
    - `es_extended`
    - `lb-phone` (2.5.1)
    - `oxmysql`
-   - Optional: `xsound`
+   - Optional: `lb-nativeaudio`, `xsound`
 4. Ensure `lb-phone` starts before this resource:
 
 ```
 ensure lb-phone
 ensure sal_public_alerts
 ```
+
+5. Replace `ui/icon.png` with your desired app icon (512x512 recommended).
 
 ## Configuration
 
@@ -27,9 +29,9 @@ Edit `shared/config.lua`:
 - **Config.RateLimit**: sender and global cooldown limits.
 - **Config.Alert**: length limits and allowed severities.
 - **Config.HistoryLimit**: number of alerts loaded on app open.
-- **Config.Sound**: xSound usage and volume.
+- **Config.Sound**: native audio/xSound usage and volume.
 - **Config.Logging**: enable logs and debug output.
-- **Config.App.Icon**: app icon asset used by the phone and notifications.
+- **Config.App.Icon**: icon path reference (actual icon uses `ui/icon.png` via cfx-nui URL).
 
 ## Sender Permissions
 
@@ -45,7 +47,7 @@ The app is registered as a default lb-phone custom app:
 
 - Identifier: `sal_desps_public_alert`
 - Label: `DESPS Public Alert`
-- Icon: `fa-triangle-exclamation`
+- Icon: `ui/icon.png`
 
 ## Commands
 

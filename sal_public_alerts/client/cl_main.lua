@@ -3,6 +3,7 @@ local ESX = exports['es_extended']:getSharedObject()
 local appRegistered = false
 local phoneReady = false
 local playerLoaded = false
+local iconUrl = ''
 
 local function debugLog(message)
     if Config.Logging.Debug then
@@ -15,31 +16,26 @@ local function registerApp()
         return
     end
 
-    if GetResourceState('lb-phone') ~= 'started' then
-        return
-    end
-
-    Wait(500)
-
-    local ok, result = pcall(function()
+    local ok, success, err = pcall(function()
         return exports['lb-phone']:AddCustomApp({
             identifier = Config.App.Identifier,
             name = Config.App.Label,
             description = Config.App.Description,
             defaultApp = true,
             ui = 'ui/index.html',
-            icon = Config.App.Icon,
+            icon = iconUrl,
             fixBlur = Config.App.FixBlur
         })
     end)
 
     if not ok then
-        debugLog(('AddCustomApp failed: %s'):format(result))
+        debugLog(('AddCustomApp failed: %s'):format(success))
         return
     end
 
-    if result == false then
-        debugLog('AddCustomApp returned false (app may already exist).')
+    if success == false then
+        debugLog(('AddCustomApp error: %s'):format(err or 'unknown'))
+        return
     end
 
     appRegistered = true
@@ -59,7 +55,7 @@ local function sendPhoneNotification(alert)
         app = Config.App.Identifier,
         title = 'Emergency Alert',
         message = alert.title,
-        icon = Config.App.Icon,
+        thumbnail = iconUrl,
         sound = false
     }
 
@@ -77,6 +73,11 @@ local function buildSoundUrl()
 end
 
 local function playAlertSound()
+    if Config.Sound.UseNativeAudio and exports['lb-nativeaudio'] and exports['lb-nativeaudio'].PlaySound then
+        exports['lb-nativeaudio']:PlaySound(Config.Sound.NativeAudioName, Config.Sound.Volume)
+        return
+    end
+
     if Config.Sound.UseXSound and exports['xsound'] then
         exports['xsound']:PlayUrl('sal_public_alerts', buildSoundUrl(), Config.Sound.Volume)
         exports['xsound']:Distance('sal_public_alerts', 1)
@@ -100,13 +101,18 @@ local function checkReady()
     end
 end
 
-CreateThread(function()
-    while GetResourceState('lb-phone') ~= 'started' do
-        Wait(250)
+local function tryRegisterApp()
+    if appRegistered then
+        return
     end
 
-    registerApp()
-end)
+    if GetResourceState('lb-phone') ~= 'started' then
+        SetTimeout(500, tryRegisterApp)
+        return
+    end
+
+    SetTimeout(500, registerApp)
+end
 
 RegisterNetEvent('sal_public_alerts:playerLoaded', function()
     playerLoaded = true
@@ -137,12 +143,22 @@ AddEventHandler('onClientResourceStart', function(resource)
         playerLoaded = true
     end
 
+    iconUrl = ('https://cfx-nui-%s/ui/icon.png'):format(GetCurrentResourceName())
+    tryRegisterApp()
     TriggerServerEvent('sal_public_alerts:requestCanSend')
     checkReady()
 end)
 
-RegisterNUICallback('fetchHistory', function(_, cb)
-    TriggerServerEvent('sal_public_alerts:fetchHistory')
+AddEventHandler('onClientResourceStart', function(resource)
+    if resource ~= 'lb-phone' then
+        return
+    end
+
+    tryRegisterApp()
+end)
+
+RegisterNUICallback('fetchFeed', function(data, cb)
+    TriggerServerEvent('sal_public_alerts:fetchFeed', data.limit, data.offset)
     cb({ ok = true })
 end)
 

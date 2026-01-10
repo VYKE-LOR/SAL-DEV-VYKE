@@ -6,6 +6,7 @@ const state = {
 
 const feedList = document.getElementById('feed-list');
 const feedEmpty = document.getElementById('feed-empty');
+const feedStatus = document.getElementById('feed-status');
 const detailsTitle = document.getElementById('details-title');
 const detailsMeta = document.getElementById('details-meta');
 const detailsMessage = document.getElementById('details-message');
@@ -13,6 +14,7 @@ const formStatus = document.getElementById('form-status');
 const senderTab = document.getElementById('sender-tab');
 const senderForm = document.getElementById('sender-form');
 const audioElement = document.getElementById('alert-audio');
+const uiError = document.getElementById('ui-error');
 
 const tabs = document.querySelectorAll('.tab-button');
 
@@ -26,7 +28,12 @@ const formatTime = (timestamp) => {
 };
 
 const renderFeed = () => {
+    if (!feedList || !feedStatus) {
+        return;
+    }
+
     feedList.innerHTML = '';
+    feedStatus.textContent = '';
 
     if (state.alerts.length === 0) {
         feedEmpty.classList.remove('hidden');
@@ -40,7 +47,7 @@ const renderFeed = () => {
         card.innerHTML = `
             <div class="title">${alert.title}</div>
             <div class="meta">
-                <span>${alert.severity.toUpperCase()}</span>
+                <span>${alert.category.toUpperCase()} • ${alert.severity.toUpperCase()}</span>
                 <span>${formatTime(alert.created_at)}</span>
             </div>
         `;
@@ -52,7 +59,7 @@ const renderFeed = () => {
 const showDetails = (alert) => {
     state.selected = alert;
     detailsTitle.textContent = alert.title;
-    detailsMeta.textContent = `${alert.severity.toUpperCase()} • ${formatTime(alert.created_at)}`;
+    detailsMeta.textContent = `${alert.category.toUpperCase()} • ${alert.severity.toUpperCase()} • ${formatTime(alert.created_at)}`;
     detailsMessage.textContent = alert.message;
     setActiveTab('details');
 };
@@ -109,6 +116,7 @@ senderForm.addEventListener('submit', (event) => {
     const payload = {
         title: document.getElementById('alert-title').value.trim(),
         message: document.getElementById('alert-message').value.trim(),
+        category: document.getElementById('alert-category').value,
         severity: document.getElementById('alert-severity').value
     };
 
@@ -161,4 +169,16 @@ window.addEventListener('message', (event) => {
 
 updatePermissions(false);
 setActiveTab('feed');
-postNui('fetchHistory');
+postNui('fetchFeed', { limit: 25, offset: 0 });
+
+if (feedStatus) {
+    feedStatus.textContent = 'Lade Alerts...';
+}
+
+window.onerror = (message) => {
+    if (!uiError) {
+        return;
+    }
+    uiError.classList.remove('hidden');
+    uiError.textContent = `UI Error: ${message}`;
+};
