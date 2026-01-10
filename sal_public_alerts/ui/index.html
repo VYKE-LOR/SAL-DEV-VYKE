@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DESPS Public Alert</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <div class="app">
+        <header>
+            <h1>DESPS Public Alert</h1>
+        </header>
+        <nav>
+            <button class="tab-button active" data-tab="feed">Alerts</button>
+            <button class="tab-button" data-tab="details">Details</button>
+            <button class="tab-button" data-tab="sender" id="sender-tab">Senden</button>
+        </nav>
+        <section class="tab-content" id="feed">
+            <div class="status" id="feed-status">Lade Alerts...</div>
+            <div class="list" id="feed-list"></div>
+            <div class="empty" id="feed-empty">Keine Meldungen vorhanden.</div>
+        </section>
+        <section class="tab-content hidden" id="details">
+            <div class="details" id="details-view">
+                <h2 id="details-title">--</h2>
+                <p class="meta" id="details-meta"></p>
+                <p class="message" id="details-message">--</p>
+            </div>
+        </section>
+        <section class="tab-content hidden" id="sender">
+            <form id="sender-form">
+                <label>
+                    Titel
+                    <input type="text" id="alert-title" maxlength="60" required />
+                </label>
+                <label>
+                    Nachricht
+                    <textarea id="alert-message" maxlength="600" required></textarea>
+                </label>
+                <label>
+                    Kategorie
+                    <select id="alert-category">
+                        <option value="general">General</option>
+                        <option value="weather">Weather</option>
+                        <option value="fire">Fire</option>
+                        <option value="police">Police</option>
+                        <option value="medical">Medical</option>
+                        <option value="test">Test</option>
+                    </select>
+                </label>
+                <label>
+                    Severity
+                    <select id="alert-severity">
+                        <option value="critical">Critical</option>
+                        <option value="warning">Warning</option>
+                        <option value="info">Info</option>
+                    </select>
+                </label>
+                <button type="submit">ALERT SENDEN</button>
+                <p class="form-status" id="form-status"></p>
+            </form>
+        </section>
+    </div>
+    <audio id="alert-audio"></audio>
+    <div class="ui-error hidden" id="ui-error"></div>
+    <script src="app.js"></script>
+</body>
+</html>
