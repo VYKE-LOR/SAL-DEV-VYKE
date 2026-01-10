@@ -38,6 +38,10 @@ local function registerApp()
         return
     end
 
+    if result == false then
+        debugLog('AddCustomApp returned false (app may already exist).')
+    end
+
     appRegistered = true
     debugLog('Custom app registered.')
 end
@@ -133,7 +137,6 @@ AddEventHandler('onClientResourceStart', function(resource)
         playerLoaded = true
     end
 
-    registerApp()
     TriggerServerEvent('sal_public_alerts:requestCanSend')
     checkReady()
 end)
