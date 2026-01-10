@@ -1,12 +1,59 @@
 local ESX = exports['es_extended']:getSharedObject()
 
-local playerLoaded = false
+local appRegistered = false
 local phoneReady = false
+local playerLoaded = false
+
+local function debugLog(message)
+    if Config.Logging.Debug then
+        print(('[sal_public_alerts][debug] %s'):format(message))
+    end
+end
+
+local function registerApp()
+    if appRegistered then
+        return
+    end
+
+    if GetResourceState('lb-phone') ~= 'started' then
+        return
+    end
+
+    Wait(500)
+
+    local ok, result = pcall(function()
+        return exports['lb-phone']:AddCustomApp({
+            identifier = Config.App.Identifier,
+            name = Config.App.Label,
+            description = Config.App.Description,
+            defaultApp = true,
+            ui = 'ui/index.html',
+            icon = Config.App.Icon,
+            fixBlur = Config.App.FixBlur
+        })
+    end)
+
+    if not ok then
+        debugLog(('AddCustomApp failed: %s'):format(result))
+        return
+    end
+
+    appRegistered = true
+    debugLog('Custom app registered.')
+end
+
+local function sendAppMessage(payload)
+    if not appRegistered then
+        return
+    end
+
+    exports['lb-phone']:SendCustomAppMessage(Config.App.Identifier, payload)
+end
 
 local function sendPhoneNotification(alert)
     local notification = {
         app = Config.App.Identifier,
-        title = Config.App.Label,
+        title = 'Emergency Alert',
         message = alert.title,
         icon = Config.App.Icon,
         sound = false
@@ -21,50 +68,26 @@ local function sendPhoneNotification(alert)
     end
 end
 
-local function playSoundOnce()
-    if Config.Sound.system == 'native' and exports['lb-nativeaudio'] and exports['lb-nativeaudio'].PlaySound then
-        exports['lb-nativeaudio']:PlaySound(Config.Sound.name, Config.Sound.volume)
-        return
-    end
+local function buildSoundUrl()
+    return ('https://cfx-nui-%s/%s'):format(GetCurrentResourceName(), Config.Sound.File)
+end
 
-    if Config.Sound.system == 'xsound' and exports['xsound'] then
-        local url = Config.Sound.url ~= '' and Config.Sound.url or Config.Sound.name
-        exports['xsound']:PlayUrl('sal_public_alerts', url, Config.Sound.volume)
+local function playAlertSound()
+    if Config.Sound.UseXSound and exports['xsound'] then
+        exports['xsound']:PlayUrl('sal_public_alerts', buildSoundUrl(), Config.Sound.Volume)
         exports['xsound']:Distance('sal_public_alerts', 1)
         return
     end
 
-    exports['sal_public_alerts']:SendAppMessage({
-        type = 'sal_public_alerts',
-        action = 'playSound',
-        name = Config.Sound.name,
-        url = Config.Sound.url,
-        volume = Config.Sound.volume,
-        duration = Config.Sound.durationMs
-    })
-end
-
-local function playAlertSound()
-    playSoundOnce()
-
-    if Config.Sound.repeatSound.enabled then
-        for i = 1, Config.Sound.repeatSound.times do
-            SetTimeout(Config.Sound.durationMs + (Config.Sound.repeatSound.intervalMs * i), function()
-                playSoundOnce()
-            end)
-        end
-    end
+    PlaySoundFrontend(-1, 'Beep_Red', 'DLC_HEIST_HACKING_SNAKE_SOUNDS', true)
+    sendAppMessage({ event = 'sound:play', data = { url = buildSoundUrl(), volume = Config.Sound.Volume } })
 end
 
 local function handleIncomingAlert(alert)
     sendPhoneNotification(alert)
     playAlertSound()
 
-    exports['sal_public_alerts']:SendAppMessage({
-        type = 'sal_public_alerts',
-        action = 'incoming',
-        alert = alert
-    })
+    sendAppMessage({ event = 'alert:new', data = alert })
 end
 
 local function checkReady()
@@ -72,6 +95,19 @@ local function checkReady()
         TriggerServerEvent('sal_public_alerts:clientReady')
     end
 end
+
+CreateThread(function()
+    while GetResourceState('lb-phone') ~= 'started' do
+        Wait(250)
+    end
+
+    registerApp()
+end)
+
+RegisterNetEvent('sal_public_alerts:playerLoaded', function()
+    playerLoaded = true
+    checkReady()
+end)
 
 RegisterNetEvent('esx:playerLoaded', function()
     playerLoaded = true
@@ -97,16 +133,33 @@ AddEventHandler('onClientResourceStart', function(resource)
         playerLoaded = true
     end
 
+    registerApp()
     TriggerServerEvent('sal_public_alerts:requestCanSend')
     checkReady()
 end)
 
-RegisterNetEvent('sal_public_alerts:incomingAlert', function(alert)
-    handleIncomingAlert(alert)
+RegisterNUICallback('fetchHistory', function(_, cb)
+    TriggerServerEvent('sal_public_alerts:fetchHistory')
+    cb({ ok = true })
 end)
 
-RegisterNetEvent('sal_public_alerts:offlineAlerts', function(alerts)
-    for _, alert in ipairs(alerts or {}) do
-        handleIncomingAlert(alert)
-    end
+RegisterNUICallback('sendAlert', function(data, cb)
+    TriggerServerEvent('sal_public_alerts:sendAlert', data)
+    cb({ ok = true })
+end)
+
+RegisterNetEvent('sal_public_alerts:historyData', function(alerts)
+    sendAppMessage({ event = 'alert:history', data = alerts or {} })
+end)
+
+RegisterNetEvent('sal_public_alerts:sendResult', function(success, reason)
+    sendAppMessage({ event = 'alert:sendResult', data = { success = success, reason = reason } })
+end)
+
+RegisterNetEvent('sal_public_alerts:canSend', function(canSend)
+    sendAppMessage({ event = 'alert:permissions', data = { canSend = canSend } })
+end)
+
+RegisterNetEvent('sal_public_alerts:newAlert', function(alert)
+    handleIncomingAlert(alert)
 end)

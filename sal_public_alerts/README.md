@@ -8,12 +8,13 @@ Custom lb-phone app for broadcasting official emergency alerts to all players.
 2. Import `sql/install.sql` into your database.
 3. Ensure dependencies are running:
    - `es_extended`
-   - `lb-phone`
+   - `lb-phone` (2.5.1)
    - `oxmysql`
-   - Optional: `lb-nativeaudio` or `xsound`
-4. Add to your `server.cfg`:
+   - Optional: `xsound`
+4. Ensure `lb-phone` starts before this resource:
 
 ```
+ensure lb-phone
 ensure sal_public_alerts
 ```
 
@@ -24,13 +25,10 @@ Edit `shared/config.lua`:
 - **Config.Senders**: list of job/grade combos that can send alerts.
 - **Config.AcePermission**: optional ace permission for senders.
 - **Config.RateLimit**: sender and global cooldown limits.
-- **Config.Alert**: length limits, default severity, categories.
-- **Config.OfflineReplayNotification**: replay notifications for alerts missed while offline.
-- **Config.Sound**:
-  - `system`: `native`, `xsound`, or `nui`.
-  - `name`: sound name (for lb-nativeaudio) or file name for NUI.
-  - `url`: optional URL for xSound or NUI.
-  - `volume`, `durationMs`, `repeatSound` settings.
+- **Config.Alert**: length limits and allowed severities.
+- **Config.HistoryLimit**: number of alerts loaded on app open.
+- **Config.Sound**: xSound usage and volume.
+- **Config.Logging**: enable logs and debug output.
 
 ## Sender Permissions
 
@@ -51,10 +49,9 @@ The app is registered as a default lb-phone custom app:
 ## Commands
 
 - `/alerttest` (sender-only) — sends a local test alarm.
-- `/alertsend [title] [message...]` (sender-only) — quick send.
 
 ## Troubleshooting
 
-- **No sound**: make sure `lb-nativeaudio` or `xsound` is installed and configured, or switch to `nui` and supply `ui/sounds/desps_critical_alarm.ogg`.
-- **No app**: ensure `lb-phone` is running and the resource started after it.
+- **No sound**: install `xsound` or verify the NUI sound file path (`ui/sounds/alert.ogg`).
+- **No app**: ensure `lb-phone` is started before `sal_public_alerts`.
 - **Permissions**: confirm the job/grade or ace permission matches your setup.

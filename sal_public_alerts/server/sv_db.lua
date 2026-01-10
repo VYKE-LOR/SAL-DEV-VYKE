@@ -1,63 +1,49 @@
 local DB = {}
 
 function DB.CreateAlert(payload)
-    local insertId = MySQL.insert.await([[INSERT INTO sal_alerts (title, message, category, severity, created_at, created_by_identifier, created_by_name, expires_at, meta)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)]],
+    return MySQL.insert.await([[INSERT INTO sal_alerts (title, message, severity, created_at, author_identifier)
+        VALUES (?, ?, ?, ?, ?)]],
         {
             payload.title,
             payload.message,
-            payload.category,
             payload.severity,
             payload.created_at,
-            payload.created_by_identifier,
-            payload.created_by_name,
-            payload.expires_at,
-            payload.meta
+            payload.author_identifier
         }
     )
-
-    return insertId
 end
 
-function DB.FetchAlerts(limit, offset)
-    return MySQL.query.await([[SELECT id, title, message, category, severity, created_at, created_by_name, expires_at, meta
+function DB.FetchHistory(limit)
+    return MySQL.query.await([[SELECT id, title, message, severity, created_at, author_identifier
         FROM sal_alerts
-        WHERE (expires_at IS NULL OR expires_at >= ?)
         ORDER BY created_at DESC
-        LIMIT ? OFFSET ?]],
-        { os.time() * 1000, limit, offset }
+        LIMIT ?]],
+        { limit }
     )
 end
 
-function DB.FetchAlertById(alertId)
-    local rows = MySQL.query.await([[SELECT id, title, message, category, severity, created_at, created_by_name, expires_at, meta
-        FROM sal_alerts WHERE id = ? LIMIT 1]], { alertId })
-    return rows and rows[1] or nil
-end
-
-function DB.FetchUndeliveredAlerts(identifier)
-    return MySQL.query.await([[SELECT a.id, a.title, a.message, a.category, a.severity, a.created_at, a.created_by_name, a.expires_at, a.meta
-        FROM sal_alerts a
-        LEFT JOIN sal_alert_receipts r ON r.alert_id = a.id AND r.identifier = ?
-        WHERE r.alert_id IS NULL AND (a.expires_at IS NULL OR a.expires_at >= ?)
-        ORDER BY a.created_at DESC]],
-        { identifier, os.time() * 1000 }
+function DB.FetchAlertsAfter(lastSeenId)
+    return MySQL.query.await([[SELECT id, title, message, severity, created_at, author_identifier
+        FROM sal_alerts
+        WHERE id > ?
+        ORDER BY id ASC]],
+        { lastSeenId }
     )
 end
 
-function DB.InsertReceipt(alertId, identifier, deliveredAt)
-    MySQL.insert.await([[INSERT INTO sal_alert_receipts (alert_id, identifier, delivered_at)
-        VALUES (?, ?, ?)
-        ON DUPLICATE KEY UPDATE delivered_at = VALUES(delivered_at)]],
-        { alertId, identifier, deliveredAt }
-    )
+function DB.GetLastSeen(identifier)
+    local rows = MySQL.query.await([[SELECT last_seen_alert_id FROM sal_alert_user_state WHERE identifier = ? LIMIT 1]], { identifier })
+    if rows and rows[1] then
+        return rows[1].last_seen_alert_id or 0
+    end
+    return 0
 end
 
-function DB.MarkSeen(alertId, identifier, seenAt)
-    MySQL.update.await([[UPDATE sal_alert_receipts
-        SET seen_at = ?
-        WHERE alert_id = ? AND identifier = ?]],
-        { seenAt, alertId, identifier }
+function DB.SetLastSeen(identifier, alertId)
+    MySQL.insert.await([[INSERT INTO sal_alert_user_state (identifier, last_seen_alert_id)
+        VALUES (?, ?)
+        ON DUPLICATE KEY UPDATE last_seen_alert_id = VALUES(last_seen_alert_id)]],
+        { identifier, alertId }
     )
 end
 

@@ -4,8 +4,10 @@ local DB = require 'server.sv_db'
 local senderRate = {}
 local lastGlobalSend = 0
 
-local function getLocale()
-    return Locales[Config.Locale] or {}
+local function debugLog(message)
+    if Config.Logging.Debug then
+        print(('[sal_public_alerts][debug] %s'):format(message))
+    end
 end
 
 local function logMessage(message)
@@ -30,35 +32,44 @@ local function isSenderAllowed(xPlayer)
 
     local job = xPlayer.getJob()
     for _, entry in ipairs(Config.Senders) do
-        if job and job.name == entry.job and job.grade >= entry.minGrade then
+        if job and job.name == entry.job and job.grade >= entry.grade then
             return true
         end
     end
+
     return false
 end
 
 local function sanitizeAlert(data)
     local title = (data.title or ''):gsub('[\r\n]+', ' '):sub(1, Config.Alert.TitleMax)
     local message = (data.message or ''):sub(1, Config.Alert.MessageMax)
-    local category = tostring(data.category or 'critical')
-    local severity = tonumber(data.severity) or Config.Alert.DefaultSeverity
+    local severity = tostring(data.severity or Config.Alert.DefaultSeverity)
 
     if title == '' or message == '' then
         return nil, 'validation'
     end
 
+    local allowed = false
+    for _, entry in ipairs(Config.Alert.SeverityOptions) do
+        if entry == severity then
+            allowed = true
+            break
+        end
+    end
+    if not allowed then
+        severity = Config.Alert.DefaultSeverity
+    end
+
     return {
         title = title,
         message = message,
-        category = category,
         severity = severity
     }
 end
 
 local function checkRateLimit(source)
     local now = os.time()
-    local sender = senderRate[source] or { times = {}, last = 0 }
-    sender.last = sender.last or 0
+    local sender = senderRate[source] or { times = {} }
 
     if (now - lastGlobalSend) < Config.RateLimit.GlobalCooldownSeconds then
         return false, 'global'
@@ -86,39 +97,13 @@ local function checkRateLimit(source)
 end
 
 local function buildAlertPayload(xPlayer, alert)
-    local createdAt = os.time() * 1000
-    local expiresAt = createdAt + (Config.Alert.DefaultExpiresHours * 3600 * 1000)
-
     return {
         title = alert.title,
         message = alert.message,
-        category = alert.category,
         severity = alert.severity,
-        created_at = createdAt,
-        created_by_identifier = xPlayer.getIdentifier(),
-        created_by_name = xPlayer.getName(),
-        expires_at = expiresAt,
-        meta = json.encode(alert.meta or {})
+        created_at = os.time() * 1000,
+        author_identifier = xPlayer.getIdentifier()
     }
-end
-
-local function dispatchAlert(alertId, alertPayload)
-    local players = ESX.GetExtendedPlayers()
-    local nowMs = os.time() * 1000
-    for _, xPlayer in ipairs(players) do
-        DB.InsertReceipt(alertId, xPlayer.getIdentifier(), nowMs)
-        TriggerClientEvent('sal_public_alerts:incomingAlert', xPlayer.source, {
-            id = alertId,
-            title = alertPayload.title,
-            message = alertPayload.message,
-            category = alertPayload.category,
-            severity = alertPayload.severity,
-            created_at = alertPayload.created_at,
-            created_by_name = alertPayload.created_by_name,
-            expires_at = alertPayload.expires_at,
-            meta = alertPayload.meta
-        })
-    end
 end
 
 local function sendAlertFromPlayer(xPlayer, data)
@@ -142,10 +127,25 @@ local function sendAlertFromPlayer(xPlayer, data)
         return false, 'db'
     end
 
-    dispatchAlert(alertId, alertPayload)
-    logMessage(('Alert %s sent by %s'):format(alertId, alertPayload.created_by_name))
+    local alert = {
+        id = alertId,
+        title = alertPayload.title,
+        message = alertPayload.message,
+        severity = alertPayload.severity,
+        created_at = alertPayload.created_at,
+        author_identifier = alertPayload.author_identifier
+    }
 
-    return true, alertId
+    TriggerClientEvent('sal_public_alerts:newAlert', -1, alert)
+
+    local players = ESX.GetExtendedPlayers()
+    for _, player in ipairs(players) do
+        DB.SetLastSeen(player.getIdentifier(), alertId)
+    end
+
+    logMessage(('Alert %s sent by %s'):format(alertId, xPlayer.getName()))
+
+    return true, alert
 end
 
 RegisterNetEvent('sal_public_alerts:requestCanSend', function()
@@ -172,25 +172,10 @@ RegisterNetEvent('sal_public_alerts:sendAlert', function(data)
     TriggerClientEvent('sal_public_alerts:sendResult', source, true)
 end)
 
-RegisterNetEvent('sal_public_alerts:fetchFeed', function(limit, offset)
+RegisterNetEvent('sal_public_alerts:fetchHistory', function()
     local src = source
-    local safeLimit = math.min(tonumber(limit) or 25, 50)
-    local safeOffset = math.max(tonumber(offset) or 0, 0)
-    local alerts = DB.FetchAlerts(safeLimit, safeOffset)
-    TriggerClientEvent('sal_public_alerts:feedData', src, alerts)
-end)
-
-RegisterNetEvent('sal_public_alerts:markSeen', function(alertId)
-    local xPlayer = ESX.GetPlayerFromId(source)
-    if not xPlayer then
-        return
-    end
-
-    if not alertId then
-        return
-    end
-
-    DB.MarkSeen(alertId, xPlayer.getIdentifier(), os.time() * 1000)
+    local alerts = DB.FetchHistory(Config.HistoryLimit)
+    TriggerClientEvent('sal_public_alerts:historyData', src, alerts)
 end)
 
 RegisterNetEvent('sal_public_alerts:clientReady', function()
@@ -206,17 +191,28 @@ RegisterNetEvent('sal_public_alerts:clientReady', function()
         return
     end
 
-    local undelivered = DB.FetchUndeliveredAlerts(identifier)
-    if not undelivered or #undelivered == 0 then
+    local lastSeen = DB.GetLastSeen(identifier)
+    local missed = DB.FetchAlertsAfter(lastSeen)
+    if not missed or #missed == 0 then
         return
     end
 
-    local nowMs = os.time() * 1000
-    for _, alert in ipairs(undelivered) do
-        DB.InsertReceipt(alert.id, identifier, nowMs)
+    local maxId = lastSeen
+    for _, alert in ipairs(missed) do
+        TriggerClientEvent('sal_public_alerts:newAlert', source, alert)
+        if alert.id > maxId then
+            maxId = alert.id
+        end
     end
 
-    TriggerClientEvent('sal_public_alerts:offlineAlerts', source, undelivered)
+    DB.SetLastSeen(identifier, maxId)
+    debugLog(('Replayed %s alerts for %s'):format(#missed, identifier))
+end)
+
+AddEventHandler('esx:playerLoaded', function(playerId)
+    if playerId then
+        TriggerClientEvent('sal_public_alerts:playerLoaded', playerId)
+    end
 end)
 
 exports('SendAlert', function(data)
@@ -229,8 +225,6 @@ exports('SendAlert', function(data)
     if not ok then
         return false, result
     end
-
-    logMessage(('Alert %s sent via export by %s'):format(result, xPlayer.getName()))
 
     return true, result
 end)
@@ -246,34 +240,14 @@ RegisterCommand('alerttest', function(src)
         return
     end
 
-    TriggerClientEvent('sal_public_alerts:incomingAlert', src, {
+    local alert = {
         id = 0,
         title = 'Test Alarm',
         message = 'Dies ist ein Testalarm.',
-        category = 'test',
         severity = Config.Alert.DefaultSeverity,
         created_at = os.time() * 1000,
-        created_by_name = xPlayer.getName(),
-        expires_at = os.time() * 1000 + (Config.Alert.DefaultExpiresHours * 3600 * 1000),
-        meta = json.encode({})
-    })
-end, false)
+        author_identifier = xPlayer.getIdentifier()
+    }
 
-RegisterCommand('alertsend', function(src, args)
-    local xPlayer = ESX.GetPlayerFromId(src)
-    if not xPlayer then
-        return
-    end
-
-    local title = args[1] or 'Alarm'
-    local message = table.concat(args, ' ', 2)
-    local ok, result = sendAlertFromPlayer(xPlayer, {
-        title = title,
-        message = message ~= '' and message or 'Alarm ausgelöst.',
-        category = 'critical',
-        severity = Config.Alert.DefaultSeverity
-    })
-    if not ok then
-        TriggerClientEvent('sal_public_alerts:sendResult', src, false, result)
-    end
+    TriggerClientEvent('sal_public_alerts:newAlert', src, alert)
 end, false)

@@ -9,13 +9,11 @@ description 'DESPS Public Alert lb-phone app'
 version '1.0.0'
 
 shared_scripts {
-    '@ox_lib/init.lua',
     'shared/config.lua',
     'shared/locales/de.lua'
 }
 
 client_scripts {
-    'client/cl_phone.lua',
     'client/cl_main.lua'
 }
 
@@ -24,8 +22,6 @@ server_scripts {
     'server/sv_db.lua',
     'server/sv_main.lua'
 }
-
-ui_page 'ui/index.html'
 
 files {
     'ui/index.html',
@@ -42,6 +38,5 @@ dependencies {
 }
 
 optional_dependencies {
-    'lb-nativeaudio',
     'xsound'
 }

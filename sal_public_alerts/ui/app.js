@@ -40,7 +40,7 @@ const renderFeed = () => {
         card.innerHTML = `
             <div class="title">${alert.title}</div>
             <div class="meta">
-                <span>${alert.category.toUpperCase()}</span>
+                <span>${alert.severity.toUpperCase()}</span>
                 <span>${formatTime(alert.created_at)}</span>
             </div>
         `;
@@ -52,9 +52,8 @@ const renderFeed = () => {
 const showDetails = (alert) => {
     state.selected = alert;
     detailsTitle.textContent = alert.title;
-    detailsMeta.textContent = `${alert.category.toUpperCase()} • ${formatTime(alert.created_at)} • ${alert.created_by_name || 'DESPS'}`;
+    detailsMeta.textContent = `${alert.severity.toUpperCase()} • ${formatTime(alert.created_at)}`;
     detailsMessage.textContent = alert.message;
-    postNui('markSeen', { id: alert.id });
     setActiveTab('details');
 };
 
@@ -93,16 +92,14 @@ const handleSendResult = (success, reason) => {
 };
 
 const playSound = (data) => {
-    const source = data.url && data.url !== '' ? data.url : `sounds/${data.name}.ogg`;
-    audioElement.src = source;
+    if (!data || !data.url) {
+        return;
+    }
+
+    audioElement.src = data.url;
     audioElement.volume = data.volume ?? 0.8;
     audioElement.currentTime = 0;
     audioElement.play().catch(() => {});
-    if (data.duration) {
-        setTimeout(() => {
-            audioElement.pause();
-        }, data.duration);
-    }
 };
 
 senderForm.addEventListener('submit', (event) => {
@@ -112,9 +109,17 @@ senderForm.addEventListener('submit', (event) => {
     const payload = {
         title: document.getElementById('alert-title').value.trim(),
         message: document.getElementById('alert-message').value.trim(),
-        category: document.getElementById('alert-category').value,
-        severity: parseInt(document.getElementById('alert-severity').value, 10)
+        severity: document.getElementById('alert-severity').value
     };
+
+    if (!payload.title || !payload.message) {
+        formStatus.textContent = 'Bitte alle Felder korrekt ausfüllen.';
+        return;
+    }
+
+    if (!window.confirm('Alert wirklich senden?')) {
+        return;
+    }
 
     postNui('sendAlert', payload);
 });
@@ -124,30 +129,30 @@ tabs.forEach(tab => {
 });
 
 window.addEventListener('message', (event) => {
-    const data = event.data;
-    if (!data || data.type !== 'sal_public_alerts') {
+    const payload = event.data;
+    if (!payload || !payload.event) {
         return;
     }
 
-    switch (data.action) {
-        case 'feed':
-            state.alerts = data.alerts || [];
+    switch (payload.event) {
+        case 'alert:history':
+            state.alerts = payload.data || [];
             renderFeed();
             break;
-        case 'incoming':
-            if (data.alert) {
-                state.alerts = [data.alert, ...state.alerts];
+        case 'alert:new':
+            if (payload.data) {
+                state.alerts = [payload.data, ...state.alerts];
                 renderFeed();
             }
             break;
-        case 'permissions':
-            updatePermissions(data.canSend);
+        case 'alert:permissions':
+            updatePermissions(payload.data?.canSend);
             break;
-        case 'sendResult':
-            handleSendResult(data.success, data.reason);
+        case 'alert:sendResult':
+            handleSendResult(payload.data?.success, payload.data?.reason);
             break;
-        case 'playSound':
-            playSound(data);
+        case 'sound:play':
+            playSound(payload.data);
             break;
         default:
             break;
@@ -156,4 +161,4 @@ window.addEventListener('message', (event) => {
 
 updatePermissions(false);
 setActiveTab('feed');
-postNui('fetchFeed', { limit: 25, offset: 0 });
+postNui('fetchHistory');

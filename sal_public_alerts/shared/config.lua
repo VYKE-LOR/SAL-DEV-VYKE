@@ -7,11 +7,12 @@ Config.App = {
     Label = 'DESPS Public Alert',
     ShortName = 'Public Alert',
     Description = 'Offizielle Notfallmeldungen des Department of Emergency Services & Public Safety.',
-    Icon = 'fa-triangle-exclamation'
+    Icon = 'fa-triangle-exclamation',
+    FixBlur = true
 }
 
 Config.Senders = {
-    { job = 'gov', minGrade = 9 }
+    { job = 'gov', grade = 9 }
 }
 
 Config.AcePermission = 'sal.publicalerts.send'
@@ -25,28 +26,23 @@ Config.RateLimit = {
 Config.Alert = {
     TitleMax = 60,
     MessageMax = 600,
-    DefaultSeverity = 5,
+    DefaultSeverity = 'critical',
     DefaultExpiresHours = 48,
-    Categories = { 'critical', 'weather', 'fire', 'police', 'medical', 'test' }
+    SeverityOptions = { 'critical', 'warning', 'info' }
 }
+
+Config.HistoryLimit = 25
 
 Config.OfflineReplayNotification = true
 
 Config.Sound = {
-    system = 'native',
-    name = 'desps_critical_alarm',
-    url = '',
-    volume = 0.8,
-    durationMs = 8000,
-    repeatSound = {
-        enabled = true,
-        times = 2,
-        intervalMs = 1200
-    },
-    respectPhoneMute = true
+    UseXSound = true,
+    File = 'ui/sounds/alert.ogg',
+    Volume = 0.8
 }
 
 Config.Logging = {
     Enabled = true,
+    Debug = false,
     Webhook = ''
 }

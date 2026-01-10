@@ -12,9 +12,9 @@
             <h1>DESPS Public Alert</h1>
         </header>
         <nav>
-            <button class="tab-button active" data-tab="feed">Feed</button>
+            <button class="tab-button active" data-tab="feed">Alerts</button>
             <button class="tab-button" data-tab="details">Details</button>
-            <button class="tab-button" data-tab="sender" id="sender-tab">Sender</button>
+            <button class="tab-button" data-tab="sender" id="sender-tab">Senden</button>
         </nav>
         <section class="tab-content" id="feed">
             <div class="list" id="feed-list"></div>
@@ -38,21 +38,14 @@
                     <textarea id="alert-message" maxlength="600" required></textarea>
                 </label>
                 <label>
-                    Kategorie
-                    <select id="alert-category">
+                    Severity
+                    <select id="alert-severity">
                         <option value="critical">Critical</option>
-                        <option value="weather">Weather</option>
-                        <option value="fire">Fire</option>
-                        <option value="police">Police</option>
-                        <option value="medical">Medical</option>
-                        <option value="test">Test</option>
+                        <option value="warning">Warning</option>
+                        <option value="info">Info</option>
                     </select>
                 </label>
-                <label>
-                    Schweregrad
-                    <input type="number" id="alert-severity" min="1" max="5" value="5" />
-                </label>
-                <button type="submit">Senden</button>
+                <button type="submit">ALERT SENDEN</button>
                 <p class="form-status" id="form-status"></p>
             </form>
         </section>
