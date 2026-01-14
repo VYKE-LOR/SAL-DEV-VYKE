@@ -24,11 +24,8 @@ server_scripts {
 }
 
 files {
-    'ui/index.html',
-    'ui/style.css',
-    'ui/app.js',
-    'ui/icon.png',
-    'ui/sounds/*'
+    'ui/*.*',
+    'ui/**/*'
 }
 
 dependencies {

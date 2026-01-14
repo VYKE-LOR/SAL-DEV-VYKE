@@ -154,12 +154,11 @@ local function sendAlertFromPlayer(xPlayer, data)
         created_by = alertPayload.created_by
     }
 
-    local iconUrl = ('https://cfx-nui-%s/ui/icon.png'):format(GetCurrentResourceName())
     local notifyPayload = {
         app = Config.App.Identifier,
         title = 'Emergency Alert',
         message = alert.title,
-        thumbnail = iconUrl
+        icon = Config.App.Icon
     }
 
     if exports['lb-phone'] and exports['lb-phone'].NotifyEveryone then
@@ -211,7 +210,7 @@ RegisterNetEvent('sal_public_alerts:sendAlert', function(data)
     TriggerClientEvent('sal_public_alerts:sendResult', source, true)
 end)
 
-RegisterNetEvent('sal_public_alerts:fetchFeed', function(limit, offset)
+RegisterNetEvent('sal_public_alerts:fetchHistory', function(limit, offset)
     local src = source
     local safeLimit = math.min(tonumber(limit) or Config.HistoryLimit, Config.HistoryLimit)
     local safeOffset = math.max(tonumber(offset) or 0, 0)

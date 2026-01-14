@@ -18,8 +18,9 @@ const uiError = document.getElementById('ui-error');
 
 const tabs = document.querySelectorAll('.tab-button');
 
+const RESOURCE = 'sal_public_alerts';
 const postNui = (endpoint, data = {}) =>
-    fetch(`https://${GetParentResourceName()}/${endpoint}`,
+    fetch(`https://${RESOURCE}/${endpoint}`,
         { method: 'POST', headers: { 'Content-Type': 'application/json; charset=UTF-8' }, body: JSON.stringify(data) });
 
 const formatTime = (timestamp) => {
@@ -169,7 +170,7 @@ window.addEventListener('message', (event) => {
 
 updatePermissions(false);
 setActiveTab('feed');
-postNui('fetchFeed', { limit: 25, offset: 0 });
+postNui('fetchHistory', { limit: 25, offset: 0 });
 
 if (feedStatus) {
     feedStatus.textContent = 'Lade Alerts...';

@@ -3,7 +3,6 @@ local ESX = exports['es_extended']:getSharedObject()
 local appRegistered = false
 local phoneReady = false
 local playerLoaded = false
-local iconUrl = ''
 
 local function debugLog(message)
     if Config.Logging.Debug then
@@ -22,8 +21,8 @@ local function registerApp()
             name = Config.App.Label,
             description = Config.App.Description,
             defaultApp = true,
-            ui = 'ui/index.html',
-            icon = iconUrl,
+            ui = ('%s/ui/index.html'):format(GetCurrentResourceName()),
+            icon = Config.App.Icon,
             fixBlur = Config.App.FixBlur
         })
     end)
@@ -55,7 +54,7 @@ local function sendPhoneNotification(alert)
         app = Config.App.Identifier,
         title = 'Emergency Alert',
         message = alert.title,
-        thumbnail = iconUrl,
+        icon = Config.App.Icon,
         sound = false
     }
 
@@ -106,12 +105,12 @@ local function tryRegisterApp()
         return
     end
 
-    if GetResourceState('lb-phone') ~= 'started' then
-        SetTimeout(500, tryRegisterApp)
-        return
+    while GetResourceState('lb-phone') ~= 'started' do
+        Wait(500)
     end
 
-    SetTimeout(500, registerApp)
+    Wait(500)
+    registerApp()
 end
 
 RegisterNetEvent('sal_public_alerts:playerLoaded', function()
@@ -143,7 +142,6 @@ AddEventHandler('onClientResourceStart', function(resource)
         playerLoaded = true
     end
 
-    iconUrl = ('https://cfx-nui-%s/ui/icon.png'):format(GetCurrentResourceName())
     tryRegisterApp()
     TriggerServerEvent('sal_public_alerts:requestCanSend')
     checkReady()
@@ -157,8 +155,8 @@ AddEventHandler('onClientResourceStart', function(resource)
     tryRegisterApp()
 end)
 
-RegisterNUICallback('fetchFeed', function(data, cb)
-    TriggerServerEvent('sal_public_alerts:fetchFeed', data.limit, data.offset)
+RegisterNUICallback('fetchHistory', function(data, cb)
+    TriggerServerEvent('sal_public_alerts:fetchHistory', data.limit, data.offset)
     cb({ ok = true })
 end)
 
