@@ -44,42 +44,43 @@ local function isSenderAllowed(xPlayer)
 end
 
 local function sanitizeAlert(data)
-    local title = (data.title or ''):gsub('[\r\n]+', ' '):sub(1, Config.Alert.TitleMax)
-    local message = (data.message or ''):sub(1, Config.Alert.MessageMax)
-    local severity = tostring(data.severity or Config.Alert.DefaultSeverity)
-    local category = tostring(data.category or Config.Alert.DefaultCategory)
+    local scenarioId = tostring(data.scenarioId or '')
+    local area = (data.area or ''):gsub('[\r\n]+', ' '):sub(1, 60)
+    local customTitle = (data.titleOptional or ''):gsub('[\r\n]+', ' '):sub(1, Config.Alert.TitleMax)
+    local customText = (data.customTextOptional or ''):sub(1, Config.Alert.MessageMax)
 
-    if title == '' or message == '' then
+    local scenario
+    for _, entry in ipairs(Config.Scenarios) do
+        if entry.id == scenarioId then
+            scenario = entry
+            break
+        end
+    end
+
+    if not scenario then
         return nil, 'validation'
     end
 
-    local allowed = false
-    for _, entry in ipairs(Config.Alert.SeverityOptions) do
-        if entry == severity then
-            allowed = true
-            break
-        end
-    end
-    if not allowed then
-        severity = Config.Alert.DefaultSeverity
+    local finalTitle = customTitle ~= '' and customTitle or scenario.defaultTitle
+    local finalMessage = customText
+
+    if finalMessage == '' then
+        local resolvedArea = area ~= '' and area or 'San Andreas'
+        local instructions = scenario.defaultInstructions or ''
+        finalMessage = (scenario.template or '')
+            :gsub('{AREA}', resolvedArea)
+            :gsub('{INSTRUCTIONS}', instructions)
     end
 
-    local categoryAllowed = false
-    for _, entry in ipairs(Config.Alert.Categories) do
-        if entry == category then
-            categoryAllowed = true
-            break
-        end
-    end
-    if not categoryAllowed then
-        category = Config.Alert.DefaultCategory
+    if finalTitle == '' or finalMessage == '' then
+        return nil, 'validation'
     end
 
     return {
-        title = title,
-        message = message,
-        severity = severity,
-        category = category
+        title = finalTitle,
+        message = finalMessage,
+        severity = scenario.severity,
+        category = scenario.id
     }
 end
 
@@ -192,7 +193,10 @@ RegisterNetEvent('sal_public_alerts:requestCanSend', function()
         return
     end
 
-    TriggerClientEvent('sal_public_alerts:canSend', source, isSenderAllowed(xPlayer))
+    TriggerClientEvent('sal_public_alerts:canSend', source, {
+        canSend = isSenderAllowed(xPlayer),
+        scenarios = Config.Scenarios
+    })
 end)
 
 RegisterNetEvent('sal_public_alerts:sendAlert', function(data)
@@ -225,7 +229,10 @@ RegisterNetEvent('sal_public_alerts:clientReady', function()
     end
 
     local identifier = xPlayer.getIdentifier()
-    TriggerClientEvent('sal_public_alerts:canSend', source, isSenderAllowed(xPlayer))
+    TriggerClientEvent('sal_public_alerts:canSend', source, {
+        canSend = isSenderAllowed(xPlayer),
+        scenarios = Config.Scenarios
+    })
 
     if not Config.OfflineReplayNotification then
         return

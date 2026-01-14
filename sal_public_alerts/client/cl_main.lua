@@ -167,6 +167,12 @@ RegisterNetEvent('sal_public_alerts:sendResult', function(success, reason)
 end)
 
 RegisterNetEvent('sal_public_alerts:canSend', function(canSend)
+    if type(canSend) == 'table' then
+        sendAppMessage({ event = 'alert:permissions', data = { canSend = canSend.canSend } })
+        sendAppMessage({ event = 'alert:scenarios', data = canSend.scenarios or {} })
+        return
+    end
+
     sendAppMessage({ event = 'alert:permissions', data = { canSend = canSend } })
 end)
 
