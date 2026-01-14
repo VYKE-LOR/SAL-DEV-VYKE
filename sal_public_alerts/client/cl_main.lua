@@ -98,12 +98,12 @@ local function tryRegisterApp()
         return
     end
 
-    while GetResourceState('lb-phone') ~= 'started' do
-        Wait(500)
+    if GetResourceState('lb-phone') ~= 'started' then
+        SetTimeout(500, tryRegisterApp)
+        return
     end
 
-    Wait(500)
-    registerApp()
+    SetTimeout(500, registerApp)
 end
 
 RegisterNetEvent('sal_public_alerts:playerLoaded', function()
@@ -154,7 +154,17 @@ RegisterNUICallback('fetchHistory', function(data, cb)
 end)
 
 RegisterNUICallback('sendAlert', function(data, cb)
-    TriggerServerEvent('sal_public_alerts:sendAlert', data)
+    if not data or not data.scenarioId then
+        cb({ ok = false, error = 'validation' })
+        return
+    end
+    local ok, err = pcall(function()
+        TriggerServerEvent('sal_public_alerts:sendAlert', data)
+    end)
+    if not ok then
+        cb({ ok = false, error = err or 'Internal error' })
+        return
+    end
     cb({ ok = true })
 end)
 
@@ -182,6 +192,44 @@ RegisterNUICallback('getPermissions', function(_, cb)
     cb({ ok = true })
 end)
 
+RegisterNetEvent('sal_public_alerts:sendAck', function(ok, msg)
+    sendAppMessage({ event = 'alert:sendAck', data = { ok = ok, msg = msg } })
+end)
+
 RegisterNetEvent('sal_public_alerts:newAlert', function(alert)
     handleIncomingAlert(alert)
+end)
+
+RegisterNetEvent('sal_public_alerts:startSirens', function(payload)
+    if not payload or not Config.Sirens or not Config.Sirens.enabled then
+        return
+    end
+
+    if GetResourceState('xsound') ~= 'started' or not exports['xsound'] then
+        if Config.Logging.Debug then
+            print('[sal_public_alerts] xSound not available for sirens.')
+        end
+        return
+    end
+
+    local soundUrl = ('https://cfx-nui-%s/%s'):format(GetCurrentResourceName(), payload.soundFile or Config.Sirens.soundFile)
+    local names = {}
+    for _, siren in ipairs(payload.sirens or {}) do
+        local name = ('sal_siren_%s_%s'):format(payload.alertId or 'alert', siren.id or math.random(1000, 9999))
+        names[#names + 1] = name
+        exports['xsound']:PlayUrlPos(name, soundUrl, payload.volume or Config.Sirens.volume, siren.coords)
+        exports['xsound']:Distance(name, siren.maxDistance or payload.maxDistance or Config.Sirens.maxDistance)
+    end
+
+    if payload.durationSeconds and payload.durationSeconds > 0 then
+        SetTimeout(payload.durationSeconds * 1000, function()
+            for _, name in ipairs(names) do
+                if exports['xsound'] and exports['xsound'].Destroy then
+                    exports['xsound']:Destroy(name)
+                elseif exports['xsound'] and exports['xsound'].Stop then
+                    exports['xsound']:Stop(name)
+                end
+            end
+        end)
+    end
 end)

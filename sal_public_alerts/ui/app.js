@@ -26,6 +26,7 @@ const titleInput = document.getElementById('alert-title');
 const messageInput = document.getElementById('alert-message');
 const previewText = document.getElementById('preview-text');
 const sendButton = document.getElementById('send-alert');
+const sirenToggle = document.getElementById('alert-sirens');
 const detailOverlay = document.getElementById('detail-overlay');
 const detailClose = document.getElementById('detail-close');
 const audioElement = document.getElementById('alert-audio');
@@ -178,7 +179,8 @@ const buildPreview = () => {
         return;
     }
 
-    const area = areaSelect.value || 'San Andreas';
+    const selectedOption = areaSelect.options[areaSelect.selectedIndex];
+    const areaLabel = (selectedOption && selectedOption.text) || 'San Andreas';
     const title = titleInput.value.trim() || scenario.defaultTitle;
     const customText = messageInput.value.trim();
     const instructions = scenario.defaultInstructions || '';
@@ -190,7 +192,7 @@ const buildPreview = () => {
 
     const template = scenario.template || '';
     previewText.textContent = template
-        .replace('{AREA}', area)
+        .replace('{AREA}', areaLabel)
         .replace('{INSTRUCTIONS}', instructions);
 };
 
@@ -213,11 +215,11 @@ const renderAreaOptions = () => {
         return;
     }
     areaSelect.innerHTML = '';
-    const areas = state.areas.length > 0 ? state.areas : ['San Andreas'];
+    const areas = state.areas.length > 0 ? state.areas : [{ key: 'statewide', label: 'San Andreas (Statewide)' }];
     areas.forEach((area) => {
         const option = document.createElement('option');
-        option.value = area;
-        option.textContent = area;
+        option.value = area.key || area;
+        option.textContent = area.label || area;
         areaSelect.appendChild(option);
     });
     buildPreview();
@@ -278,12 +280,39 @@ if (sendButton) {
         if (!window.confirm('Alarm wirklich senden?')) {
             return;
         }
-        postNui('sendAlert', {
-            scenarioId: scenarioSelect.value,
-            area: areaSelect.value,
-            title: titleInput.value.trim(),
-            customText: messageInput.value.trim()
-        });
+        sendButton.disabled = true;
+        const originalText = sendButton.textContent;
+        sendButton.textContent = 'Sende…';
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 6000);
+
+        fetch(`https://${RESOURCE}/sendAlert`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+            body: JSON.stringify({
+                scenarioId: scenarioSelect.value,
+                areaKey: areaSelect.value,
+                title: titleInput.value.trim(),
+                customText: messageInput.value.trim(),
+                enableSirens: sirenToggle ? sirenToggle.checked : false
+            }),
+            signal: controller.signal
+        })
+            .then((res) => res.json())
+            .then((data) => {
+                if (!data || data.ok === false) {
+                    formStatus.textContent = data && data.error ? data.error : 'Senden fehlgeschlagen.';
+                }
+            })
+            .catch((err) => {
+                formStatus.textContent = err.name === 'AbortError' ? 'Timeout beim Senden.' : 'Senden fehlgeschlagen.';
+            })
+            .finally(() => {
+                clearTimeout(timeout);
+                sendButton.disabled = false;
+                sendButton.textContent = originalText;
+            });
     });
 }
 
@@ -319,6 +348,13 @@ window.addEventListener('message', (event) => {
             handleSendResult(payload.data && payload.data.success, payload.data && payload.data.reason);
             if (payload.data && payload.data.success) {
                 closeSheet();
+            }
+            break;
+        case 'alert:sendAck':
+            if (payload.data && payload.data.ok) {
+                formStatus.textContent = 'Alarm gesendet.';
+            } else if (payload.data) {
+                formStatus.textContent = payload.data.msg || 'Senden fehlgeschlagen.';
             }
             break;
         case 'sound:play':

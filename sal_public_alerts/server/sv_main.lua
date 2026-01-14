@@ -45,6 +45,7 @@ end
 
 local function sanitizeAlert(data)
     local scenarioId = tostring(data.scenarioId or '')
+    local areaKey = tostring(data.areaKey or '')
     local area = (data.area or ''):gsub('[\r\n]+', ' '):sub(1, 60)
     local customTitle = (data.titleOptional or data.title or ''):gsub('[\r\n]+', ' '):sub(1, Config.Alert.TitleMax)
     local customText = (data.customTextOptional or data.customText or ''):sub(1, Config.Alert.MessageMax)
@@ -66,6 +67,9 @@ local function sanitizeAlert(data)
 
     if finalMessage == '' then
         local resolvedArea = area ~= '' and area or 'San Andreas'
+        if areaKey ~= '' and Config.Sirens and Config.Sirens.zones and Config.Sirens.zones[areaKey] then
+            resolvedArea = Config.Sirens.zones[areaKey].label or resolvedArea
+        end
         local instructions = scenario.defaultInstructions or ''
         finalMessage = (scenario.template or '')
             :gsub('{AREA}', resolvedArea)
@@ -80,7 +84,8 @@ local function sanitizeAlert(data)
         title = finalTitle,
         message = finalMessage,
         severity = scenario.severity,
-        category = scenario.id
+        category = scenario.id,
+        areaKey = areaKey ~= '' and areaKey or 'statewide'
     }
 end
 
@@ -177,6 +182,26 @@ local function sendAlertFromPlayer(xPlayer, data)
 
     TriggerClientEvent('sal_public_alerts:newAlert', -1, alert)
 
+    local sirenConfig = Config.Sirens
+    if data.enableSirens and sirenConfig and sirenConfig.enabled then
+        local zoneKey = sanitized.areaKey
+        local zone = sirenConfig.zones[zoneKey] or sirenConfig.zones.statewide
+        if zone and zone.sirens and #zone.sirens > 0 then
+            TriggerClientEvent('sal_public_alerts:startSirens', -1, {
+                alertId = alertId,
+                zoneKey = zoneKey,
+                sirens = zone.sirens,
+                soundFile = sirenConfig.soundFile,
+                volume = sirenConfig.volume,
+                durationSeconds = sirenConfig.durationSeconds,
+                fadeInMs = sirenConfig.fadeInMs,
+                fadeOutMs = sirenConfig.fadeOutMs,
+                maxDistance = sirenConfig.maxDistance,
+                refDistance = sirenConfig.refDistance
+            })
+        end
+    end
+
     local players = ESX.GetExtendedPlayers()
     for _, player in ipairs(players) do
         DB.SetLastSeen(player.getIdentifier(), alertId)
@@ -206,13 +231,15 @@ RegisterNetEvent('sal_public_alerts:sendAlert', function(data)
         return
     end
 
-    local ok, result = sendAlertFromPlayer(xPlayer, data)
+    local ok, result = sendAlertFromPlayer(xPlayer, data or {})
     if not ok then
         TriggerClientEvent('sal_public_alerts:sendResult', source, false, result)
+        TriggerClientEvent('sal_public_alerts:sendAck', source, false, result)
         return
     end
 
     TriggerClientEvent('sal_public_alerts:sendResult', source, true)
+    TriggerClientEvent('sal_public_alerts:sendAck', source, true, 'sent')
 end)
 
 RegisterNetEvent('sal_public_alerts:fetchHistory', function(limit, offset)

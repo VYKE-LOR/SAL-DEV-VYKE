@@ -89,11 +89,57 @@ Config.Scenarios = {
 }
 
 Config.Areas = {
-    'Statewide',
-    'Los Santos',
-    'Blaine County',
-    'Sandy Shores',
-    'Paleto Bay'
+    { key = 'statewide', label = 'San Andreas (Statewide)' },
+    { key = 'los_santos', label = 'Los Santos' },
+    { key = 'blaine_county', label = 'Blaine County' },
+    { key = 'sandy_shores', label = 'Sandy Shores' },
+    { key = 'paleto_bay', label = 'Paleto Bay' }
+}
+
+Config.Sirens = {
+    enabled = true,
+    soundFile = 'ui/sounds/siren.ogg',
+    volume = 0.75,
+    durationSeconds = 45,
+    fadeInMs = 800,
+    fadeOutMs = 1200,
+    maxDistance = 350.0,
+    refDistance = 25.0,
+    zones = {
+        statewide = {
+            label = 'San Andreas (Statewide)',
+            sirens = {
+                { id = 'ls1', coords = vector3(-267.5, -958.2, 31.2), maxDistance = 350.0 },
+                { id = 'bc1', coords = vector3(1856.4, 3683.7, 34.2), maxDistance = 350.0 },
+                { id = 'pb1', coords = vector3(-447.6, 6011.6, 31.7), maxDistance = 350.0 }
+            }
+        },
+        los_santos = {
+            label = 'Los Santos',
+            sirens = {
+                { id = 'ls1', coords = vector3(-267.5, -958.2, 31.2), maxDistance = 300.0 },
+                { id = 'ls2', coords = vector3(428.2, -981.9, 30.7), maxDistance = 300.0 }
+            }
+        },
+        blaine_county = {
+            label = 'Blaine County',
+            sirens = {
+                { id = 'bc1', coords = vector3(1856.4, 3683.7, 34.2), maxDistance = 320.0 }
+            }
+        },
+        sandy_shores = {
+            label = 'Sandy Shores',
+            sirens = {
+                { id = 'ss1', coords = vector3(1701.5, 3784.9, 34.8), maxDistance = 280.0 }
+            }
+        },
+        paleto_bay = {
+            label = 'Paleto Bay',
+            sirens = {
+                { id = 'pb1', coords = vector3(-447.6, 6011.6, 31.7), maxDistance = 280.0 }
+            }
+        }
+    }
 }
 
 Config.Sound = {
