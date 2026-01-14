@@ -6,7 +6,7 @@ const state = {
 
 const feedList = document.getElementById('feed-list');
 const feedEmpty = document.getElementById('feed-empty');
-const feedStatus = document.getElementById('feed-status');
+const statusEl = document.getElementById('status');
 const detailsTitle = document.getElementById('details-title');
 const detailsMeta = document.getElementById('details-meta');
 const detailsMessage = document.getElementById('details-message');
@@ -29,12 +29,12 @@ const formatTime = (timestamp) => {
 };
 
 const renderFeed = () => {
-    if (!feedList || !feedStatus) {
+    if (!feedList || !statusEl) {
         return;
     }
 
     feedList.innerHTML = '';
-    feedStatus.textContent = '';
+    statusEl.textContent = '';
 
     if (state.alerts.length === 0) {
         feedEmpty.classList.remove('hidden');
@@ -172,14 +172,17 @@ updatePermissions(false);
 setActiveTab('feed');
 postNui('fetchHistory', { limit: 25, offset: 0 });
 
-if (feedStatus) {
-    feedStatus.textContent = 'Lade Alerts...';
+if (statusEl) {
+    statusEl.textContent = 'Lade Alerts...';
 }
 
 window.onerror = (message) => {
-    if (!uiError) {
+    if (!statusEl) {
         return;
     }
-    uiError.classList.remove('hidden');
-    uiError.textContent = `UI Error: ${message}`;
+    statusEl.textContent = `UI Error: ${message}`;
+    if (uiError) {
+        uiError.classList.remove('hidden');
+        uiError.textContent = `UI Error: ${message}`;
+    }
 };

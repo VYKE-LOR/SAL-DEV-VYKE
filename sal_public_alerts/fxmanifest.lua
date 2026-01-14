@@ -24,7 +24,9 @@ server_scripts {
 }
 
 files {
-    'ui/*.*',
+    'ui/index.html',
+    'ui/styles.css',
+    'ui/app.js',
     'ui/**/*'
 }
 

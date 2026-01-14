@@ -15,25 +15,18 @@ local function registerApp()
         return
     end
 
-    local ok, success, err = pcall(function()
-        return exports['lb-phone']:AddCustomApp({
-            identifier = Config.App.Identifier,
-            name = Config.App.Label,
-            description = Config.App.Description,
-            defaultApp = true,
-            ui = ('%s/ui/index.html'):format(GetCurrentResourceName()),
-            icon = Config.App.Icon,
-            fixBlur = Config.App.FixBlur
-        })
-    end)
-
-    if not ok then
-        debugLog(('AddCustomApp failed: %s'):format(success))
-        return
-    end
+    local success, err = exports['lb-phone']:AddCustomApp({
+        identifier = Config.App.Identifier,
+        name = Config.App.Label,
+        description = Config.App.Description,
+        defaultApp = true,
+        ui = ('%s/ui/index.html'):format(GetCurrentResourceName()),
+        icon = Config.App.Icon,
+        fixBlur = Config.App.FixBlur
+    })
 
     if success == false then
-        debugLog(('AddCustomApp error: %s'):format(err or 'unknown'))
+        print(('[sal_public_alerts] AddCustomApp failed: %s'):format(err or 'unknown'))
         return
     end
 
