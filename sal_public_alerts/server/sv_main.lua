@@ -46,8 +46,8 @@ end
 local function sanitizeAlert(data)
     local scenarioId = tostring(data.scenarioId or '')
     local area = (data.area or ''):gsub('[\r\n]+', ' '):sub(1, 60)
-    local customTitle = (data.titleOptional or ''):gsub('[\r\n]+', ' '):sub(1, Config.Alert.TitleMax)
-    local customText = (data.customTextOptional or ''):sub(1, Config.Alert.MessageMax)
+    local customTitle = (data.titleOptional or data.title or ''):gsub('[\r\n]+', ' '):sub(1, Config.Alert.TitleMax)
+    local customText = (data.customTextOptional or data.customText or ''):sub(1, Config.Alert.MessageMax)
 
     local scenario
     for _, entry in ipairs(Config.Scenarios) do
@@ -195,7 +195,8 @@ RegisterNetEvent('sal_public_alerts:requestCanSend', function()
 
     TriggerClientEvent('sal_public_alerts:canSend', source, {
         canSend = isSenderAllowed(xPlayer),
-        scenarios = Config.Scenarios
+        scenarios = Config.Scenarios,
+        areas = Config.Areas
     })
 end)
 
@@ -231,7 +232,8 @@ RegisterNetEvent('sal_public_alerts:clientReady', function()
     local identifier = xPlayer.getIdentifier()
     TriggerClientEvent('sal_public_alerts:canSend', source, {
         canSend = isSenderAllowed(xPlayer),
-        scenarios = Config.Scenarios
+        scenarios = Config.Scenarios,
+        areas = Config.Areas
     })
 
     if not Config.OfflineReplayNotification then

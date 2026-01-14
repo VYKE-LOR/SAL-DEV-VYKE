@@ -1,6 +1,7 @@
 const state = {
     alerts: [],
     scenarios: [],
+    areas: [],
     selected: null,
     canSend: false
 };
@@ -30,6 +31,10 @@ const detailClose = document.getElementById('detail-close');
 const audioElement = document.getElementById('alert-audio');
 const uiError = document.getElementById('ui-error');
 
+if (statusEl) {
+    statusEl.textContent = 'Lade Alerts...';
+}
+
 const RESOURCE = 'sal_public_alerts';
 const postNui = (endpoint, data = {}) =>
     fetch(`https://${RESOURCE}/${endpoint}`,
@@ -37,7 +42,11 @@ const postNui = (endpoint, data = {}) =>
 
 const formatTime = (timestamp) => {
     const date = new Date(timestamp);
-    return date.toLocaleString('de-DE');
+    const time = date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    const today = new Date();
+    const isToday = date.toDateString() === today.toDateString();
+    const dayLabel = isToday ? 'Heute' : date.toLocaleDateString('de-DE');
+    return `${time} • ${dayLabel}`;
 };
 
 const severityClass = (severity) => {
@@ -199,6 +208,21 @@ const renderScenarioOptions = () => {
     buildPreview();
 };
 
+const renderAreaOptions = () => {
+    if (!areaSelect) {
+        return;
+    }
+    areaSelect.innerHTML = '';
+    const areas = state.areas.length > 0 ? state.areas : ['San Andreas'];
+    areas.forEach((area) => {
+        const option = document.createElement('option');
+        option.value = area;
+        option.textContent = area;
+        areaSelect.appendChild(option);
+    });
+    buildPreview();
+};
+
 const openSheet = () => {
     if (sendSheet) {
         sendSheet.classList.remove('hidden');
@@ -257,8 +281,8 @@ if (sendButton) {
         postNui('sendAlert', {
             scenarioId: scenarioSelect.value,
             area: areaSelect.value,
-            titleOptional: titleInput.value.trim(),
-            customTextOptional: messageInput.value.trim()
+            title: titleInput.value.trim(),
+            customText: messageInput.value.trim()
         });
     });
 }
@@ -287,6 +311,10 @@ window.addEventListener('message', (event) => {
             state.scenarios = payload.data || [];
             renderScenarioOptions();
             break;
+        case 'alert:areas':
+            state.areas = payload.data || [];
+            renderAreaOptions();
+            break;
         case 'alert:sendResult':
             handleSendResult(payload.data && payload.data.success, payload.data && payload.data.reason);
             if (payload.data && payload.data.success) {
@@ -302,11 +330,8 @@ window.addEventListener('message', (event) => {
 });
 
 updatePermissions(false);
+postNui('getPermissions');
 postNui('fetchHistory', { limit: 25, offset: 0 });
-
-if (statusEl) {
-    statusEl.textContent = 'Lade Alerts...';
-}
 
 window.onerror = (message) => {
     if (!statusEl) {

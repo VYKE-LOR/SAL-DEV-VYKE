@@ -88,6 +88,14 @@ Config.Scenarios = {
     }
 }
 
+Config.Areas = {
+    'Statewide',
+    'Los Santos',
+    'Blaine County',
+    'Sandy Shores',
+    'Paleto Bay'
+}
+
 Config.Sound = {
     UseNativeAudio = true,
     NativeAudioName = 'desps_critical_alarm',

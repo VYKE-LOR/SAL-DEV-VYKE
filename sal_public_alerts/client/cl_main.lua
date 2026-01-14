@@ -170,10 +170,16 @@ RegisterNetEvent('sal_public_alerts:canSend', function(canSend)
     if type(canSend) == 'table' then
         sendAppMessage({ event = 'alert:permissions', data = { canSend = canSend.canSend } })
         sendAppMessage({ event = 'alert:scenarios', data = canSend.scenarios or {} })
+        sendAppMessage({ event = 'alert:areas', data = canSend.areas or {} })
         return
     end
 
     sendAppMessage({ event = 'alert:permissions', data = { canSend = canSend } })
+end)
+
+RegisterNUICallback('getPermissions', function(_, cb)
+    TriggerServerEvent('sal_public_alerts:requestCanSend')
+    cb({ ok = true })
 end)
 
 RegisterNetEvent('sal_public_alerts:newAlert', function(alert)
