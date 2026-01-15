@@ -3,7 +3,11 @@ const state = {
     scenarios: [],
     areas: [],
     selected: null,
-    canSend: false
+    canSend: false,
+    showSendSheet: false,
+    showConfirm: false,
+    sending: false,
+    lastError: null
 };
 
 const activeList = document.getElementById('active-list');
@@ -145,7 +149,8 @@ const handleSendResult = (success, reason) => {
     if (success) {
         formStatus.textContent = 'Alarm gesendet.';
         resetForm();
-        closeSheet();
+        state.showSendSheet = false;
+        renderUIState();
         return;
     }
 
@@ -162,6 +167,8 @@ const handleSendResult = (success, reason) => {
         default:
             formStatus.textContent = 'Fehler beim Senden.';
     }
+    state.lastError = formStatus.textContent;
+    renderUIState();
 };
 
 const playSound = (data) => {
@@ -232,46 +239,50 @@ const renderAreaOptions = () => {
     buildPreview();
 };
 
-const openSheet = () => {
+const renderUIState = () => {
     if (sendSheet) {
-        sendSheet.classList.remove('hidden');
+        sendSheet.classList.toggle('hidden', !state.showSendSheet);
     }
-};
-
-const closeSheet = () => {
-    if (sendSheet) {
-        sendSheet.classList.add('hidden');
-    }
-};
-
-const openConfirm = () => {
     if (confirmModal) {
-        confirmModal.classList.remove('hidden');
+        confirmModal.classList.toggle('hidden', !state.showConfirm);
     }
-};
-
-const closeConfirm = () => {
-    if (confirmModal) {
-        confirmModal.classList.add('hidden');
+    if (sendButton) {
+        sendButton.disabled = state.sending;
+        sendButton.textContent = state.sending ? 'Sende…' : 'ALARM SENDEN';
+    }
+    if (state.lastError && formStatus) {
+        formStatus.textContent = state.lastError;
     }
 };
 
 if (emergencyButton) {
-    emergencyButton.addEventListener('click', openSheet);
+    emergencyButton.addEventListener('click', () => {
+        state.showSendSheet = true;
+        state.lastError = null;
+        renderUIState();
+    });
 }
 
 if (sheetClose) {
-    sheetClose.addEventListener('click', closeSheet);
+    sheetClose.addEventListener('click', () => {
+        state.showSendSheet = false;
+        state.showConfirm = false;
+        renderUIState();
+    });
 }
 
 if (confirmCancel) {
-    confirmCancel.addEventListener('click', closeConfirm);
+    confirmCancel.addEventListener('click', () => {
+        state.showConfirm = false;
+        renderUIState();
+    });
 }
 
 if (confirmModal) {
     confirmModal.addEventListener('click', (event) => {
         if (event.target === confirmModal) {
-            closeConfirm();
+            state.showConfirm = false;
+            renderUIState();
         }
     });
 }
@@ -308,18 +319,16 @@ if (sendButton) {
             formStatus.textContent = 'Bitte ein Szenario auswählen.';
             return;
         }
-        openConfirm();
+        state.showConfirm = true;
+        renderUIState();
     });
 }
 
 const sendAlertRequest = () => {
-    if (!sendButton) {
-        return;
-    }
-
-    sendButton.disabled = true;
-    const originalText = sendButton.textContent;
-    sendButton.textContent = 'Sende…';
+    state.showConfirm = false;
+    state.sending = true;
+    state.lastError = null;
+    renderUIState();
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 6000);
@@ -339,22 +348,21 @@ const sendAlertRequest = () => {
         .then((res) => res.json())
         .then((data) => {
             if (!data || data.ok === false) {
-                formStatus.textContent = data && data.error ? data.error : 'Senden fehlgeschlagen.';
+                state.lastError = data && data.error ? data.error : 'Senden fehlgeschlagen.';
             }
         })
         .catch((err) => {
-            formStatus.textContent = err.name === 'AbortError' ? 'Timeout beim Senden.' : 'Senden fehlgeschlagen.';
+            state.lastError = err.name === 'AbortError' ? 'Timeout beim Senden.' : 'Senden fehlgeschlagen.';
         })
         .finally(() => {
             clearTimeout(timeout);
-            sendButton.disabled = false;
-            sendButton.textContent = originalText;
+            state.sending = false;
+            renderUIState();
         });
 };
 
 if (confirmSend) {
     confirmSend.addEventListener('click', () => {
-        closeConfirm();
         sendAlertRequest();
     });
 }
@@ -394,10 +402,11 @@ window.addEventListener('message', (event) => {
             if (payload.data && payload.data.ok) {
                 formStatus.textContent = 'Alarm gesendet.';
                 resetForm();
-                closeSheet();
+                state.showSendSheet = false;
             } else if (payload.data) {
-                formStatus.textContent = payload.data.msg || 'Senden fehlgeschlagen.';
+                state.lastError = payload.data.msg || 'Senden fehlgeschlagen.';
             }
+            renderUIState();
             break;
         case 'sound:play':
             playSound(payload.data);
@@ -410,6 +419,7 @@ window.addEventListener('message', (event) => {
 updatePermissions(false);
 postNui('getPermissions');
 postNui('fetchHistory', { limit: 25, offset: 0 });
+renderUIState();
 
 window.onerror = (message) => {
     if (!statusEl) {
