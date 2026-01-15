@@ -98,12 +98,13 @@ Config.Areas = {
 
 Config.Sirens = {
     enabled = true,
+    useXSound = true,
     soundFile = 'ui/sounds/siren.ogg',
     volume = 0.75,
     durationSeconds = 45,
     fadeInMs = 800,
     fadeOutMs = 1200,
-    maxDistance = 350.0,
+    defaultMaxDistance = 350.0,
     refDistance = 25.0,
     zones = {
         statewide = {

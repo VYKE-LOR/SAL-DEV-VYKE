@@ -196,7 +196,7 @@ local function sendAlertFromPlayer(xPlayer, data)
                 durationSeconds = sirenConfig.durationSeconds,
                 fadeInMs = sirenConfig.fadeInMs,
                 fadeOutMs = sirenConfig.fadeOutMs,
-                maxDistance = sirenConfig.maxDistance,
+                maxDistance = sirenConfig.defaultMaxDistance,
                 refDistance = sirenConfig.refDistance
             })
         end

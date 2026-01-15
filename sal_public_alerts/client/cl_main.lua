@@ -149,8 +149,14 @@ AddEventHandler('onClientResourceStart', function(resource)
 end)
 
 RegisterNUICallback('fetchHistory', function(data, cb)
-    TriggerServerEvent('sal_public_alerts:fetchHistory', data.limit, data.offset)
-    cb({ ok = true })
+    local ok, err = pcall(function()
+        TriggerServerEvent('sal_public_alerts:fetchHistory', data.limit, data.offset)
+    end)
+    if not ok then
+        cb({ ok = false, error = err or 'Internal error', alerts = {} })
+        return
+    end
+    cb({ ok = true, alerts = {} })
 end)
 
 RegisterNUICallback('sendAlert', function(data, cb)
@@ -205,7 +211,7 @@ RegisterNetEvent('sal_public_alerts:startSirens', function(payload)
         return
     end
 
-    if GetResourceState('xsound') ~= 'started' or not exports['xsound'] then
+    if not Config.Sirens.useXSound or GetResourceState('xsound') ~= 'started' or not exports['xsound'] then
         if Config.Logging.Debug then
             print('[sal_public_alerts] xSound not available for sirens.')
         end
@@ -218,7 +224,7 @@ RegisterNetEvent('sal_public_alerts:startSirens', function(payload)
         local name = ('sal_siren_%s_%s'):format(payload.alertId or 'alert', siren.id or math.random(1000, 9999))
         names[#names + 1] = name
         exports['xsound']:PlayUrlPos(name, soundUrl, payload.volume or Config.Sirens.volume, siren.coords)
-        exports['xsound']:Distance(name, siren.maxDistance or payload.maxDistance or Config.Sirens.maxDistance)
+        exports['xsound']:Distance(name, siren.maxDistance or payload.maxDistance or Config.Sirens.defaultMaxDistance)
     end
 
     if payload.durationSeconds and payload.durationSeconds > 0 then

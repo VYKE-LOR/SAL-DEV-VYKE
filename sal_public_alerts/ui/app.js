@@ -29,6 +29,9 @@ const sendButton = document.getElementById('send-alert');
 const sirenToggle = document.getElementById('alert-sirens');
 const detailOverlay = document.getElementById('detail-overlay');
 const detailClose = document.getElementById('detail-close');
+const confirmModal = document.getElementById('confirm-modal');
+const confirmCancel = document.getElementById('confirm-cancel');
+const confirmSend = document.getElementById('confirm-send');
 const audioElement = document.getElementById('alert-audio');
 const uiError = document.getElementById('ui-error');
 
@@ -237,12 +240,36 @@ const closeSheet = () => {
     }
 };
 
+const openConfirm = () => {
+    if (confirmModal) {
+        confirmModal.classList.remove('hidden');
+    }
+};
+
+const closeConfirm = () => {
+    if (confirmModal) {
+        confirmModal.classList.add('hidden');
+    }
+};
+
 if (emergencyButton) {
     emergencyButton.addEventListener('click', openSheet);
 }
 
 if (sheetClose) {
     sheetClose.addEventListener('click', closeSheet);
+}
+
+if (confirmCancel) {
+    confirmCancel.addEventListener('click', closeConfirm);
+}
+
+if (confirmModal) {
+    confirmModal.addEventListener('click', (event) => {
+        if (event.target === confirmModal) {
+            closeConfirm();
+        }
+    });
 }
 
 if (detailClose) {
@@ -277,42 +304,54 @@ if (sendButton) {
             formStatus.textContent = 'Bitte ein Szenario auswählen.';
             return;
         }
-        if (!window.confirm('Alarm wirklich senden?')) {
-            return;
-        }
-        sendButton.disabled = true;
-        const originalText = sendButton.textContent;
-        sendButton.textContent = 'Sende…';
+        openConfirm();
+    });
+}
 
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 6000);
+const sendAlertRequest = () => {
+    if (!sendButton) {
+        return;
+    }
 
-        fetch(`https://${RESOURCE}/sendAlert`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json; charset=UTF-8' },
-            body: JSON.stringify({
-                scenarioId: scenarioSelect.value,
-                areaKey: areaSelect.value,
-                title: titleInput.value.trim(),
-                customText: messageInput.value.trim(),
-                enableSirens: sirenToggle ? sirenToggle.checked : false
-            }),
-            signal: controller.signal
+    sendButton.disabled = true;
+    const originalText = sendButton.textContent;
+    sendButton.textContent = 'Sende…';
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000);
+
+    fetch(`https://${RESOURCE}/sendAlert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+        body: JSON.stringify({
+            scenarioId: scenarioSelect.value,
+            areaKey: areaSelect.value,
+            title: titleInput.value.trim(),
+            customText: messageInput.value.trim(),
+            enableSirens: sirenToggle ? sirenToggle.checked : false
+        }),
+        signal: controller.signal
+    })
+        .then((res) => res.json())
+        .then((data) => {
+            if (!data || data.ok === false) {
+                formStatus.textContent = data && data.error ? data.error : 'Senden fehlgeschlagen.';
+            }
         })
-            .then((res) => res.json())
-            .then((data) => {
-                if (!data || data.ok === false) {
-                    formStatus.textContent = data && data.error ? data.error : 'Senden fehlgeschlagen.';
-                }
-            })
-            .catch((err) => {
-                formStatus.textContent = err.name === 'AbortError' ? 'Timeout beim Senden.' : 'Senden fehlgeschlagen.';
-            })
-            .finally(() => {
-                clearTimeout(timeout);
-                sendButton.disabled = false;
-                sendButton.textContent = originalText;
-            });
+        .catch((err) => {
+            formStatus.textContent = err.name === 'AbortError' ? 'Timeout beim Senden.' : 'Senden fehlgeschlagen.';
+        })
+        .finally(() => {
+            clearTimeout(timeout);
+            sendButton.disabled = false;
+            sendButton.textContent = originalText;
+        });
+};
+
+if (confirmSend) {
+    confirmSend.addEventListener('click', () => {
+        closeConfirm();
+        sendAlertRequest();
     });
 }
 
