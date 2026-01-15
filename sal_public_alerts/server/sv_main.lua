@@ -160,11 +160,18 @@ local function sendAlertFromPlayer(xPlayer, data)
         created_by = alertPayload.created_by
     }
 
+    local preview = alert.message
+    if #preview > 140 then
+        preview = preview:sub(1, 140) .. '...'
+    end
+
     local notifyPayload = {
         app = Config.App.Identifier,
-        title = 'Emergency Alert',
-        message = alert.title,
-        icon = Config.App.Icon
+        title = 'DESPS CRITICAL ALERT',
+        message = preview,
+        icon = Config.App.Icon,
+        duration = 15000,
+        type = 'critical'
     }
 
     if exports['lb-phone'] and exports['lb-phone'].NotifyEveryone then

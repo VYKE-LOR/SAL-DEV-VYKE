@@ -122,6 +122,22 @@ body {
     gap: 0.45rem;
 }
 
+.alert-card.critical {
+    border-left: 4px solid var(--danger);
+}
+
+.alert-card.warning {
+    border-left: 4px solid var(--warning);
+}
+
+.alert-card.info {
+    border-left: 4px solid var(--info);
+}
+
+.alert-card.test {
+    border-left: 4px solid var(--muted);
+}
+
 .alert-card .title {
     font-weight: 600;
     font-size: 0.88rem;

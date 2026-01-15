@@ -43,11 +43,17 @@ local function sendAppMessage(payload)
 end
 
 local function sendPhoneNotification(alert)
+    local preview = alert.message or ''
+    if #preview > 140 then
+        preview = preview:sub(1, 140) .. '...'
+    end
     local notification = {
         app = Config.App.Identifier,
-        title = 'Emergency Alert',
-        message = alert.title,
+        title = 'DESPS CRITICAL ALERT',
+        message = preview ~= '' and preview or alert.title,
         icon = Config.App.Icon,
+        duration = 15000,
+        type = 'critical',
         sound = false
     }
 
@@ -67,16 +73,26 @@ end
 local function playAlertSound()
     if Config.Sound.UseNativeAudio and exports['lb-nativeaudio'] and exports['lb-nativeaudio'].PlaySound then
         exports['lb-nativeaudio']:PlaySound(Config.Sound.NativeAudioName, Config.Sound.Volume)
+        SetTimeout(1500, function()
+            exports['lb-nativeaudio']:PlaySound(Config.Sound.NativeAudioName, Config.Sound.Volume)
+        end)
         return
     end
 
     if Config.Sound.UseXSound and exports['xsound'] then
         exports['xsound']:PlayUrl('sal_public_alerts', buildSoundUrl(), Config.Sound.Volume)
         exports['xsound']:Distance('sal_public_alerts', 1)
+        SetTimeout(1500, function()
+            exports['xsound']:PlayUrl('sal_public_alerts_repeat', buildSoundUrl(), Config.Sound.Volume)
+            exports['xsound']:Distance('sal_public_alerts_repeat', 1)
+        end)
         return
     end
 
     PlaySoundFrontend(-1, 'Beep_Red', 'DLC_HEIST_HACKING_SNAKE_SOUNDS', true)
+    SetTimeout(1500, function()
+        PlaySoundFrontend(-1, 'Beep_Red', 'DLC_HEIST_HACKING_SNAKE_SOUNDS', true)
+    end)
     sendAppMessage({ event = 'sound:play', data = { url = buildSoundUrl(), volume = Config.Sound.Volume } })
 end
 

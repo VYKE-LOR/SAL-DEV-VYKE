@@ -61,9 +61,18 @@ const severityClass = (severity) => {
     return 'info';
 };
 
+const resetForm = () => {
+    if (titleInput) titleInput.value = '';
+    if (messageInput) messageInput.value = '';
+    if (sirenToggle) sirenToggle.checked = false;
+    if (scenarioSelect) scenarioSelect.selectedIndex = 0;
+    if (areaSelect) areaSelect.selectedIndex = 0;
+    buildPreview();
+};
+
 const makeCard = (alert) => {
     const card = document.createElement('div');
-    card.className = 'alert-card';
+    card.className = `alert-card ${severityClass(alert.severity)}`;
     card.innerHTML = `
         <div class="title">${alert.title}</div>
         <div class="meta">
@@ -134,14 +143,9 @@ const updatePermissions = (canSend) => {
 
 const handleSendResult = (success, reason) => {
     if (success) {
-        formStatus.textContent = 'Meldung gesendet.';
-        if (titleInput) {
-            titleInput.value = '';
-        }
-        if (messageInput) {
-            messageInput.value = '';
-        }
-        buildPreview();
+        formStatus.textContent = 'Alarm gesendet.';
+        resetForm();
+        closeSheet();
         return;
     }
 
@@ -385,13 +389,12 @@ window.addEventListener('message', (event) => {
             break;
         case 'alert:sendResult':
             handleSendResult(payload.data && payload.data.success, payload.data && payload.data.reason);
-            if (payload.data && payload.data.success) {
-                closeSheet();
-            }
             break;
         case 'alert:sendAck':
             if (payload.data && payload.data.ok) {
                 formStatus.textContent = 'Alarm gesendet.';
+                resetForm();
+                closeSheet();
             } else if (payload.data) {
                 formStatus.textContent = payload.data.msg || 'Senden fehlgeschlagen.';
             }
