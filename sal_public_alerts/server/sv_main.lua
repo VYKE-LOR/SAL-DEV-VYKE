@@ -189,6 +189,9 @@ local function sendAlertFromPlayer(xPlayer, data)
 
     TriggerClientEvent('sal_public_alerts:newAlert', -1, alert)
 
+    TriggerClientEvent('sal_public_alerts:sendResult', xPlayer.source, true)
+    TriggerClientEvent('sal_public_alerts:sendAck', xPlayer.source, true, 'sent')
+
     local sirenConfig = Config.Sirens
     if data.enableSirens and sirenConfig and sirenConfig.enabled then
         local zoneKey = sanitized.areaKey
@@ -209,9 +212,14 @@ local function sendAlertFromPlayer(xPlayer, data)
         end
     end
 
-    local players = ESX.GetExtendedPlayers()
-    for _, player in ipairs(players) do
-        DB.SetLastSeen(player.getIdentifier(), alertId)
+    local ok, err = pcall(function()
+        local players = ESX.GetExtendedPlayers()
+        for _, player in ipairs(players) do
+            DB.SetLastSeen(player.getIdentifier(), alertId)
+        end
+    end)
+    if not ok then
+        logMessage(('LastSeen update failed: %s'):format(tostring(err)))
     end
 
     logMessage(('Alert %s sent by %s'):format(alertId, xPlayer.getName()))
@@ -244,9 +252,6 @@ RegisterNetEvent('sal_public_alerts:sendAlert', function(data)
         TriggerClientEvent('sal_public_alerts:sendAck', source, false, result)
         return
     end
-
-    TriggerClientEvent('sal_public_alerts:sendResult', source, true)
-    TriggerClientEvent('sal_public_alerts:sendAck', source, true, 'sent')
 end)
 
 RegisterNetEvent('sal_public_alerts:fetchHistory', function(limit, offset)
