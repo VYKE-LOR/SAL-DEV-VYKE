@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DESPS Public Alert</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+    <div class="app">
+        <header class="app-header">
+            <div>
+                <h1>DESPS Public Alert</h1>
+                <p class="subtitle">Öffentliche Warnmeldungen für San Andreas</p>
+            </div>
+            <span class="status-chip" id="status-chip">OK</span>
+        </header>
+
+        <main class="content">
+            <section class="panel">
+                <div class="panel-head">
+                    <h2>Aktive Warnungen</h2>
+                    <span class="status" id="status">Lade Alerts...</span>
+                </div>
+                <div class="list" id="active-list"></div>
+                <div class="empty" id="active-empty">Keine aktiven Warnungen.</div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-head">
+                    <h2>Letzte Meldungen</h2>
+                    <span class="muted">Chronik</span>
+                </div>
+                <div class="list" id="history-list"></div>
+                <div class="empty" id="history-empty">Keine Meldungen vorhanden.</div>
+            </section>
+
+            <section class="panel gov-only hidden" id="gov-panel">
+                <button class="danger-button" id="emergency-button" type="button">NOTFALL</button>
+                <p class="muted">Nur autorisierte Stellen</p>
+            </section>
+        </main>
+
+        <div class="detail-overlay hidden" id="detail-overlay">
+            <div class="detail-card">
+                <button class="close-button" id="detail-close" type="button">×</button>
+                <h3 id="details-title">--</h3>
+                <p class="meta" id="details-meta"></p>
+                <p class="message" id="details-message">--</p>
+            </div>
+        </div>
+
+        <div class="sheet hidden" id="send-sheet">
+            <div class="sheet-header">
+                <h3>Notfallmeldung senden</h3>
+                <button class="close-button" id="sheet-close" type="button">×</button>
+            </div>
+            <div class="sheet-body">
+                <label>
+                    Szenario
+                    <select id="scenario-select"></select>
+                </label>
+                <label class="checkbox-row">
+                    <input type="checkbox" id="alert-sirens" />
+                    <span>Luftschutzsirenen aktivieren</span>
+                </label>
+                <label>
+                    Gebiet
+                    <select id="alert-area"></select>
+                </label>
+                <label>
+                    Alarmdauer (Minuten)
+                    <select id="alert-duration">
+                        <option value="">Keine</option>
+                        <option value="5">5 Minuten</option>
+                        <option value="10">10 Minuten</option>
+                        <option value="15">15 Minuten</option>
+                        <option value="30">30 Minuten</option>
+                        <option value="60">60 Minuten</option>
+                    </select>
+                </label>
+                <label>
+                    Alarm bis Uhrzeit
+                    <input type="time" id="alert-until" />
+                </label>
+                <label class="checkbox-row">
+                    <input type="checkbox" id="alert-auto-clear" />
+                    <span>Automatische Entwarnung nach Ablauf</span>
+                </label>
+                <label>
+                    Titel (optional)
+                    <input type="text" id="alert-title" maxlength="60" placeholder="z. B. NOTFALLWARNUNG" />
+                </label>
+                <label>
+                    Eigener Text (optional)
+                    <textarea id="alert-message" maxlength="600" placeholder="Eigener Hinweis für die Bevölkerung"></textarea>
+                </label>
+                <div class="preview">
+                    <h4>Vorschau</h4>
+                    <p id="preview-text">Lade Szenario…</p>
+                </div>
+                <button class="danger-button" id="send-alert" type="button">ALARM SENDEN</button>
+                <p class="form-status" id="form-status"></p>
+            </div>
+        </div>
+
+    </div>
+    <audio id="alert-audio"></audio>
+    <div class="ui-error hidden" id="ui-error"></div>
+    <script src="app.js"></script>
+</body>
+</html>
