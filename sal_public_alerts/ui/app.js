@@ -33,9 +33,9 @@ const sendButton = document.getElementById('send-alert');
 const sirenToggle = document.getElementById('alert-sirens');
 const detailOverlay = document.getElementById('detail-overlay');
 const detailClose = document.getElementById('detail-close');
-const confirmModal = document.getElementById('confirm-modal');
-const confirmCancel = document.getElementById('confirm-cancel');
-const confirmSend = document.getElementById('confirm-send');
+const confirmModal = document.getElementById('confirmModal');
+const confirmCancel = document.getElementById('confirmCancel');
+const confirmSend = document.getElementById('confirmSend');
 const audioElement = document.getElementById('alert-audio');
 const uiError = document.getElementById('ui-error');
 
@@ -244,7 +244,7 @@ const renderUIState = () => {
         sendSheet.classList.toggle('hidden', !state.showSendSheet);
     }
     if (confirmModal) {
-        confirmModal.classList.toggle('hidden', !state.showConfirm);
+        confirmModal.hidden = !state.showConfirm;
     }
     if (sendButton) {
         sendButton.disabled = state.sending;
