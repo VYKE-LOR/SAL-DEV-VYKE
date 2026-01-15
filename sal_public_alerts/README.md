@@ -29,7 +29,8 @@ Edit `shared/config.lua`:
 - **Config.RateLimit**: sender and global cooldown limits.
 - **Config.Alert**: length limits and allowed severities.
 - **Config.HistoryLimit**: number of alerts loaded on app open.
-- **Config.Sound**: native audio/xSound usage and volume.
+- **Config.AlarmSound**: custom alarm sound configuration.
+- **Config.AutoClear**: default auto-clear behavior.
 - **Config.Logging**: enable logs and debug output.
 - **Config.App.Icon**: icon path reference (actual icon uses `ui/icon.png` via cfx-nui URL).
 
@@ -55,6 +56,6 @@ The app is registered as a default lb-phone custom app:
 
 ## Troubleshooting
 
-- **No sound**: install `xsound` or verify the NUI sound file path (`ui/sounds/alert.ogg`).
+- **No sound**: install `xsound` or verify the NUI sound file path (`ui/sounds/critical_alarm.ogg`).
 - **No app**: ensure `lb-phone` is started before `sal_public_alerts`.
 - **Permissions**: confirm the job/grade or ace permission matches your setup.

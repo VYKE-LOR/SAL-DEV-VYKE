@@ -1,11 +1,11 @@
 const state = {
-    alerts: [],
+    activeAlerts: [],
+    historyAlerts: [],
     scenarios: [],
     areas: [],
     selected: null,
     canSend: false,
     showSendSheet: false,
-    showConfirm: false,
     sending: false,
     lastError: null
 };
@@ -26,6 +26,9 @@ const sendSheet = document.getElementById('send-sheet');
 const sheetClose = document.getElementById('sheet-close');
 const scenarioSelect = document.getElementById('scenario-select');
 const areaSelect = document.getElementById('alert-area');
+const durationSelect = document.getElementById('alert-duration');
+const untilInput = document.getElementById('alert-until');
+const autoClearToggle = document.getElementById('alert-auto-clear');
 const titleInput = document.getElementById('alert-title');
 const messageInput = document.getElementById('alert-message');
 const previewText = document.getElementById('preview-text');
@@ -34,10 +37,15 @@ const sirenToggle = document.getElementById('alert-sirens');
 const detailOverlay = document.getElementById('detail-overlay');
 const detailClose = document.getElementById('detail-close');
 const confirmModal = document.getElementById('confirmModal');
+const confirmTitle = document.getElementById('confirm-title');
+const confirmText = document.getElementById('confirm-text');
 const confirmCancel = document.getElementById('confirmCancel');
 const confirmSend = document.getElementById('confirmSend');
 const audioElement = document.getElementById('alert-audio');
 const uiError = document.getElementById('ui-error');
+
+let pendingConfirmAction = null;
+let pendingClearId = null;
 
 if (statusEl) {
     statusEl.textContent = 'Lade Alerts...';
@@ -69,14 +77,27 @@ const resetForm = () => {
     if (titleInput) titleInput.value = '';
     if (messageInput) messageInput.value = '';
     if (sirenToggle) sirenToggle.checked = false;
+    if (durationSelect) durationSelect.value = '';
+    if (untilInput) untilInput.value = '';
+    if (autoClearToggle) autoClearToggle.checked = false;
     if (scenarioSelect) scenarioSelect.selectedIndex = 0;
     if (areaSelect) areaSelect.selectedIndex = 0;
     buildPreview();
 };
 
-const makeCard = (alert) => {
+const formatExpiry = (timestamp) => {
+    if (!timestamp) {
+        return 'Ohne Ablauf';
+    }
+    return `Läuft bis ${formatTime(timestamp)}`;
+};
+
+const makeCard = (alert, options = {}) => {
     const card = document.createElement('div');
     card.className = `alert-card ${severityClass(alert.severity)}`;
+    const actions = options.showClear
+        ? `<div class="alert-actions"><button class="clear-button" type="button" data-action="clear" data-alert-id="${alert.id}">Alarm aufheben</button></div>`
+        : '';
     card.innerHTML = `
         <div class="title">${alert.title}</div>
         <div class="meta">
@@ -84,8 +105,15 @@ const makeCard = (alert) => {
             <span>${formatTime(alert.created_at)}</span>
         </div>
         <div class="muted">${alert.message.slice(0, 90)}${alert.message.length > 90 ? '…' : ''}</div>
+        ${options.showExpires ? `<div class="muted">${formatExpiry(alert.expires_at)}</div>` : ''}
+        ${actions}
     `;
-    card.addEventListener('click', () => showDetails(alert));
+    card.addEventListener('click', (event) => {
+        if (event.target && event.target.dataset && event.target.dataset.action === 'clear') {
+            return;
+        }
+        showDetails(alert);
+    });
     return card;
 };
 
@@ -98,23 +126,26 @@ const renderFeed = () => {
     historyList.innerHTML = '';
     statusEl.textContent = '';
 
-    if (state.alerts.length === 0) {
+    if (state.activeAlerts.length === 0) {
         activeEmpty.classList.remove('hidden');
-        historyEmpty.classList.remove('hidden');
-        updateStatusChip(false);
-        return;
+    } else {
+        activeEmpty.classList.add('hidden');
     }
 
-    activeEmpty.classList.add('hidden');
-    historyEmpty.classList.add('hidden');
+    if (state.historyAlerts.length === 0) {
+        historyEmpty.classList.remove('hidden');
+    } else {
+        historyEmpty.classList.add('hidden');
+    }
 
-    const activeAlerts = state.alerts.slice(0, 3);
-    const historyAlerts = state.alerts;
+    state.activeAlerts.forEach(alert =>
+        activeList.appendChild(makeCard(alert, { showClear: state.canSend, showExpires: true }))
+    );
+    state.historyAlerts.forEach(alert =>
+        historyList.appendChild(makeCard(alert, { showExpires: false }))
+    );
 
-    activeAlerts.forEach(alert => activeList.appendChild(makeCard(alert)));
-    historyAlerts.forEach(alert => historyList.appendChild(makeCard(alert)));
-
-    updateStatusChip(true);
+    updateStatusChip(state.activeAlerts.length > 0);
 };
 
 const showDetails = (alert) => {
@@ -143,9 +174,23 @@ const updatePermissions = (canSend) => {
     if (govPanel) {
         govPanel.classList.toggle('hidden', !canSend);
     }
+    renderFeed();
+};
+
+const openConfirm = () => {
+    if (confirmModal) {
+        confirmModal.hidden = false;
+    }
+};
+
+const closeConfirm = () => {
+    if (confirmModal) {
+        confirmModal.hidden = true;
+    }
 };
 
 const handleSendResult = (success, reason) => {
+    closeConfirm();
     if (success) {
         formStatus.textContent = 'Alarm gesendet.';
         resetForm();
@@ -210,6 +255,28 @@ const buildPreview = () => {
         .replace('{INSTRUCTIONS}', instructions);
 };
 
+const getExpiryPayload = () => {
+    const durationMinutes = durationSelect && durationSelect.value ? Number(durationSelect.value) : null;
+    if (durationMinutes && !Number.isNaN(durationMinutes)) {
+        return { durationMinutes, expiresAt: null };
+    }
+
+    if (untilInput && untilInput.value) {
+        const [hours, minutes] = untilInput.value.split(':').map(Number);
+        if (!Number.isNaN(hours) && !Number.isNaN(minutes)) {
+            const now = new Date();
+            const expires = new Date(now);
+            expires.setHours(hours, minutes, 0, 0);
+            if (expires.getTime() <= now.getTime()) {
+                expires.setDate(expires.getDate() + 1);
+            }
+            return { durationMinutes: null, expiresAt: expires.getTime() };
+        }
+    }
+
+    return { durationMinutes: null, expiresAt: null };
+};
+
 const renderScenarioOptions = () => {
     if (!scenarioSelect) {
         return;
@@ -243,9 +310,6 @@ const renderUIState = () => {
     if (sendSheet) {
         sendSheet.classList.toggle('hidden', !state.showSendSheet);
     }
-    if (confirmModal) {
-        confirmModal.hidden = !state.showConfirm;
-    }
     if (sendButton) {
         sendButton.disabled = state.sending;
         sendButton.textContent = state.sending ? 'Sende…' : 'ALARM SENDEN';
@@ -255,83 +319,16 @@ const renderUIState = () => {
     }
 };
 
-if (emergencyButton) {
-    emergencyButton.addEventListener('click', () => {
-        state.showSendSheet = true;
-        state.lastError = null;
-        renderUIState();
-    });
-}
-
-if (sheetClose) {
-    sheetClose.addEventListener('click', () => {
-        state.showSendSheet = false;
-        state.showConfirm = false;
-        renderUIState();
-    });
-}
-
-if (confirmCancel) {
-    confirmCancel.addEventListener('click', () => {
-        state.showConfirm = false;
-        renderUIState();
-    });
-}
-
-if (confirmModal) {
-    confirmModal.addEventListener('click', (event) => {
-        if (event.target === confirmModal) {
-            state.showConfirm = false;
-            renderUIState();
-        }
-    });
-}
-
-if (detailClose) {
-    detailClose.addEventListener('click', () => detailOverlay.classList.add('hidden'));
-}
-
-if (detailOverlay) {
-    detailOverlay.addEventListener('click', (event) => {
-        if (event.target === detailOverlay) {
-            detailOverlay.classList.add('hidden');
-        }
-    });
-}
-
-if (scenarioSelect) {
-    scenarioSelect.addEventListener('change', buildPreview);
-}
-if (areaSelect) {
-    areaSelect.addEventListener('change', buildPreview);
-}
-if (titleInput) {
-    titleInput.addEventListener('input', buildPreview);
-}
-if (messageInput) {
-    messageInput.addEventListener('input', buildPreview);
-}
-
-if (sendButton) {
-    sendButton.addEventListener('click', () => {
-        formStatus.textContent = '';
-        if (!scenarioSelect.value) {
-            formStatus.textContent = 'Bitte ein Szenario auswählen.';
-            return;
-        }
-        state.showConfirm = true;
-        renderUIState();
-    });
-}
-
 const sendAlertRequest = () => {
-    state.showConfirm = false;
+    closeConfirm();
     state.sending = true;
     state.lastError = null;
     renderUIState();
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 6000);
+
+    const expiryPayload = getExpiryPayload();
 
     fetch(`https://${RESOURCE}/sendAlert`, {
         method: 'POST',
@@ -341,7 +338,10 @@ const sendAlertRequest = () => {
             areaKey: areaSelect.value,
             title: titleInput.value.trim(),
             customText: messageInput.value.trim(),
-            enableSirens: sirenToggle ? sirenToggle.checked : false
+            enableSirens: sirenToggle ? sirenToggle.checked : false,
+            durationMinutes: expiryPayload.durationMinutes,
+            expiresAt: expiryPayload.expiresAt,
+            autoClear: autoClearToggle ? autoClearToggle.checked : false
         }),
         signal: controller.signal
     })
@@ -361,11 +361,166 @@ const sendAlertRequest = () => {
         });
 };
 
-if (confirmSend) {
-    confirmSend.addEventListener('click', () => {
-        sendAlertRequest();
-    });
-}
+const sendClearRequest = (alertId) => {
+    closeConfirm();
+    state.sending = true;
+    state.lastError = null;
+    renderUIState();
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000);
+
+    fetch(`https://${RESOURCE}/clearAlert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+        body: JSON.stringify({ alertId }),
+        signal: controller.signal
+    })
+        .then((res) => res.json())
+        .then((data) => {
+            if (!data || data.ok === false) {
+                state.lastError = data && data.error ? data.error : 'Entwarnung fehlgeschlagen.';
+            }
+        })
+        .catch((err) => {
+            state.lastError = err.name === 'AbortError' ? 'Timeout beim Aufheben.' : 'Entwarnung fehlgeschlagen.';
+        })
+        .finally(() => {
+            clearTimeout(timeout);
+            state.sending = false;
+            renderUIState();
+        });
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (emergencyButton) {
+        emergencyButton.addEventListener('click', () => {
+            state.showSendSheet = true;
+            state.lastError = null;
+            renderUIState();
+        });
+    }
+
+    if (sheetClose) {
+        sheetClose.addEventListener('click', () => {
+            state.showSendSheet = false;
+            closeConfirm();
+            renderUIState();
+        });
+    }
+
+    if (confirmCancel) {
+        confirmCancel.addEventListener('click', () => {
+            pendingConfirmAction = null;
+            pendingClearId = null;
+            closeConfirm();
+        });
+    }
+
+    if (confirmModal) {
+        confirmModal.addEventListener('click', (event) => {
+            if (event.target === confirmModal) {
+                pendingConfirmAction = null;
+                pendingClearId = null;
+                closeConfirm();
+            }
+        });
+    }
+
+    if (detailClose) {
+        detailClose.addEventListener('click', () => detailOverlay.classList.add('hidden'));
+    }
+
+    if (detailOverlay) {
+        detailOverlay.addEventListener('click', (event) => {
+            if (event.target === detailOverlay) {
+                detailOverlay.classList.add('hidden');
+            }
+        });
+    }
+
+    if (scenarioSelect) {
+        scenarioSelect.addEventListener('change', buildPreview);
+    }
+    if (areaSelect) {
+        areaSelect.addEventListener('change', buildPreview);
+    }
+    if (titleInput) {
+        titleInput.addEventListener('input', buildPreview);
+    }
+    if (messageInput) {
+        messageInput.addEventListener('input', buildPreview);
+    }
+
+    if (durationSelect) {
+        durationSelect.addEventListener('change', () => {
+            if (durationSelect.value && untilInput) {
+                untilInput.value = '';
+            }
+        });
+    }
+
+    if (untilInput) {
+        untilInput.addEventListener('change', () => {
+            if (untilInput.value && durationSelect) {
+                durationSelect.value = '';
+            }
+        });
+    }
+
+    if (sendButton) {
+        sendButton.addEventListener('click', () => {
+            formStatus.textContent = '';
+            if (!scenarioSelect.value) {
+                formStatus.textContent = 'Bitte ein Szenario auswählen.';
+                return;
+            }
+            pendingConfirmAction = 'send';
+            pendingClearId = null;
+            if (confirmTitle) {
+                confirmTitle.textContent = 'Alarm wirklich senden?';
+            }
+            if (confirmText) {
+                confirmText.textContent = 'Diese Meldung wird an die gesamte Bevölkerung gesendet.';
+            }
+            openConfirm();
+        });
+    }
+
+    if (confirmSend) {
+        confirmSend.addEventListener('click', () => {
+            closeConfirm();
+            const action = pendingConfirmAction;
+            const alertId = pendingClearId;
+            pendingConfirmAction = null;
+            pendingClearId = null;
+            if (action === 'clear' && alertId) {
+                sendClearRequest(alertId);
+                return;
+            }
+            sendAlertRequest();
+        });
+    }
+
+    if (activeList) {
+        activeList.addEventListener('click', (event) => {
+            const target = event.target;
+            if (!target || target.dataset.action !== 'clear') {
+                return;
+            }
+            event.stopPropagation();
+            pendingConfirmAction = 'clear';
+            pendingClearId = Number(target.dataset.alertId);
+            if (confirmTitle) {
+                confirmTitle.textContent = 'Alarm aufheben?';
+            }
+            if (confirmText) {
+                confirmText.textContent = 'Es wird eine Entwarnung an alle gesendet.';
+            }
+            openConfirm();
+        });
+    }
+});
 
 window.addEventListener('message', (event) => {
     const payload = event.data;
@@ -375,14 +530,27 @@ window.addEventListener('message', (event) => {
 
     switch (payload.event) {
         case 'alert:history':
-            state.alerts = payload.data || [];
+            if (Array.isArray(payload.data)) {
+                state.activeAlerts = [];
+                state.historyAlerts = payload.data;
+            } else {
+                state.activeAlerts = (payload.data && payload.data.active) || [];
+                state.historyAlerts = (payload.data && payload.data.history) || [];
+            }
             renderFeed();
             break;
         case 'alert:new':
             if (payload.data) {
-                state.alerts = [payload.data, ...state.alerts];
+                state.historyAlerts = [payload.data, ...state.historyAlerts];
+                if (payload.data.is_active) {
+                    state.activeAlerts = [payload.data, ...state.activeAlerts];
+                }
                 renderFeed();
             }
+            break;
+        case 'alert:cleared':
+            state.activeAlerts = state.activeAlerts.filter(alert => alert.id !== payload.data);
+            renderFeed();
             break;
         case 'alert:permissions':
             updatePermissions(payload.data && payload.data.canSend);
@@ -398,7 +566,17 @@ window.addEventListener('message', (event) => {
         case 'alert:sendResult':
             handleSendResult(payload.data && payload.data.success, payload.data && payload.data.reason);
             break;
+        case 'alert:clearResult':
+            closeConfirm();
+            if (payload.data && payload.data.ok) {
+                formStatus.textContent = 'Entwarnung gesendet.';
+            } else {
+                state.lastError = payload.data && payload.data.error ? payload.data.error : 'Entwarnung fehlgeschlagen.';
+            }
+            renderUIState();
+            break;
         case 'alert:sendAck':
+            closeConfirm();
             if (payload.data && payload.data.ok) {
                 formStatus.textContent = 'Alarm gesendet.';
                 resetForm();
@@ -422,6 +600,7 @@ postNui('fetchHistory', { limit: 25, offset: 0 });
 renderUIState();
 
 window.onerror = (message) => {
+    closeConfirm();
     if (!statusEl) {
         return;
     }
@@ -431,3 +610,7 @@ window.onerror = (message) => {
         uiError.textContent = `UI Error: ${message}`;
     }
 };
+
+window.addEventListener('unhandledrejection', () => {
+    closeConfirm();
+});

@@ -122,6 +122,22 @@ body {
     gap: 0.45rem;
 }
 
+.alert-card .alert-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.clear-button {
+    padding: 0.45rem 0.7rem;
+    border-radius: 0.7rem;
+    border: 1px solid rgba(230, 70, 70, 0.4);
+    background: rgba(230, 70, 70, 0.12);
+    color: var(--danger);
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
 .alert-card.critical {
     border-left: 4px solid var(--danger);
 }

@@ -36,14 +36,14 @@
             </section>
 
             <section class="panel gov-only hidden" id="gov-panel">
-                <button class="danger-button" id="emergency-button">NOTFALL</button>
+                <button class="danger-button" id="emergency-button" type="button">NOTFALL</button>
                 <p class="muted">Nur autorisierte Stellen</p>
             </section>
         </main>
 
         <div class="detail-overlay hidden" id="detail-overlay">
             <div class="detail-card">
-                <button class="close-button" id="detail-close">×</button>
+                <button class="close-button" id="detail-close" type="button">×</button>
                 <h3 id="details-title">--</h3>
                 <p class="meta" id="details-meta"></p>
                 <p class="message" id="details-message">--</p>
@@ -53,7 +53,7 @@
         <div class="sheet hidden" id="send-sheet">
             <div class="sheet-header">
                 <h3>Notfallmeldung senden</h3>
-                <button class="close-button" id="sheet-close">×</button>
+                <button class="close-button" id="sheet-close" type="button">×</button>
             </div>
             <div class="sheet-body">
                 <label>
@@ -69,6 +69,25 @@
                     <select id="alert-area"></select>
                 </label>
                 <label>
+                    Alarmdauer (Minuten)
+                    <select id="alert-duration">
+                        <option value="">Keine</option>
+                        <option value="5">5 Minuten</option>
+                        <option value="10">10 Minuten</option>
+                        <option value="15">15 Minuten</option>
+                        <option value="30">30 Minuten</option>
+                        <option value="60">60 Minuten</option>
+                    </select>
+                </label>
+                <label>
+                    Alarm bis Uhrzeit
+                    <input type="time" id="alert-until" />
+                </label>
+                <label class="checkbox-row">
+                    <input type="checkbox" id="alert-auto-clear" />
+                    <span>Automatische Entwarnung nach Ablauf</span>
+                </label>
+                <label>
                     Titel (optional)
                     <input type="text" id="alert-title" maxlength="60" placeholder="z. B. NOTFALLWARNUNG" />
                 </label>
@@ -80,15 +99,15 @@
                     <h4>Vorschau</h4>
                     <p id="preview-text">Lade Szenario…</p>
                 </div>
-                <button class="danger-button" id="send-alert">ALARM SENDEN</button>
+                <button class="danger-button" id="send-alert" type="button">ALARM SENDEN</button>
                 <p class="form-status" id="form-status"></p>
             </div>
         </div>
 
         <div class="confirm-modal" id="confirmModal" hidden>
             <div class="confirm-card">
-                <h4>Alarm wirklich senden?</h4>
-                <p class="muted">Diese Meldung wird an die gesamte Bevölkerung gesendet.</p>
+                <h4 id="confirm-title">Alarm wirklich senden?</h4>
+                <p class="muted" id="confirm-text">Diese Meldung wird an die gesamte Bevölkerung gesendet.</p>
                 <div class="confirm-actions">
                     <button class="secondary-button" id="confirmCancel" type="button">Abbrechen</button>
                     <button class="danger-button" id="confirmSend" type="button">Senden</button>

@@ -6,6 +6,12 @@ CREATE TABLE IF NOT EXISTS `sal_alerts` (
     `category` VARCHAR(32) NOT NULL DEFAULT 'general',
     `created_at` BIGINT NOT NULL,
     `created_by` VARCHAR(64) NOT NULL,
+    `expires_at` BIGINT NULL,
+    `is_active` TINYINT NOT NULL DEFAULT 1,
+    `cleared_at` BIGINT NULL,
+    `cleared_by` VARCHAR(64) NULL,
+    `alert_type` VARCHAR(16) NOT NULL DEFAULT 'alert',
+    `auto_clear` TINYINT NOT NULL DEFAULT 0,
     PRIMARY KEY (`id`),
     INDEX `idx_sal_alerts_created_at` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

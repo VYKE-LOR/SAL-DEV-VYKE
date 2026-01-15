@@ -6,6 +6,7 @@ end
 
 local senderRate = {}
 local lastGlobalSend = 0
+local clearTimers = {}
 
 local function debugLog(message)
     if Config.Logging.Debug then
@@ -125,8 +126,117 @@ local function buildAlertPayload(xPlayer, alert)
         severity = alert.severity,
         category = alert.category,
         created_at = os.time() * 1000,
-        created_by = xPlayer.getIdentifier()
+        created_by = xPlayer.getIdentifier(),
+        expires_at = alert.expires_at,
+        is_active = alert.is_active,
+        cleared_at = alert.cleared_at,
+        cleared_by = alert.cleared_by,
+        alert_type = alert.alert_type,
+        auto_clear = alert.auto_clear
     }
+end
+
+local function resolveExpiry(data)
+    local nowMs = os.time() * 1000
+    local durationMinutes = tonumber(data.durationMinutes)
+    local expiresAt = tonumber(data.expiresAt)
+
+    if durationMinutes and durationMinutes > 0 then
+        return nowMs + (durationMinutes * 60 * 1000)
+    end
+
+    if expiresAt and expiresAt > nowMs then
+        return expiresAt
+    end
+
+    return nil
+end
+
+local function sendNotification(alert, isClear)
+    local preview = alert.message
+    if #preview > 140 then
+        preview = preview:sub(1, 140) .. '...'
+    end
+
+    local notifyPayload = {
+        app = Config.App.Identifier,
+        title = isClear and 'DESPS ENTWARNUNG' or 'DESPS CRITICAL ALERT',
+        message = preview,
+        icon = Config.App.Icon,
+        duration = 15000,
+        type = isClear and 'info' or 'critical',
+        sound = false,
+        silent = true
+    }
+
+    if exports['lb-phone'] and exports['lb-phone'].NotifyEveryone then
+        local ok, success, err = pcall(function()
+            return exports['lb-phone']:NotifyEveryone('all', notifyPayload)
+        end)
+        if not ok then
+            logMessage(('NotifyEveryone failed: %s'):format(success))
+        elseif success == false then
+            logMessage(('NotifyEveryone error: %s'):format(err or 'unknown'))
+        end
+    else
+        logMessage('NotifyEveryone export not available on lb-phone.')
+    end
+end
+
+local function scheduleAutoClear(alertId, expiresAt)
+    if not alertId or not expiresAt then
+        return
+    end
+
+    local delay = math.max(expiresAt - (os.time() * 1000), 0)
+    clearTimers[alertId] = SetTimeout(delay, function()
+        TriggerEvent('sal_public_alerts:autoClear', alertId)
+    end)
+end
+
+local function clearAlert(alertId, clearedBy, isAuto)
+    local clearedAt = os.time() * 1000
+    local res, err = DB.ClearAlert(alertId, clearedAt, clearedBy)
+    if err or not res or res < 1 then
+        return false, err or 'not_active'
+    end
+
+    TriggerClientEvent('sal_public_alerts:alertCleared', -1, alertId)
+    TriggerClientEvent('sal_public_alerts:stopSirens', -1, { alertId = alertId })
+
+    local clearAlertPayload = {
+        title = 'ENTWARNUNG',
+        message = 'ENTWARNUNG – Der Alarm wurde aufgehoben. Es besteht keine akute Gefahr mehr.',
+        severity = 'info',
+        category = 'clear',
+        created_at = clearedAt,
+        created_by = clearedBy or 'SYSTEM',
+        expires_at = nil,
+        is_active = 0,
+        cleared_at = clearedAt,
+        cleared_by = clearedBy or 'SYSTEM',
+        alert_type = 'clear',
+        auto_clear = 0
+    }
+
+    local clearId = DB.CreateAlert(clearAlertPayload)
+    if clearId then
+        clearAlertPayload.id = clearId
+        TriggerClientEvent('sal_public_alerts:newAlert', -1, clearAlertPayload)
+        sendNotification(clearAlertPayload, true)
+
+        local ok, err = pcall(function()
+            local players = ESX.GetExtendedPlayers()
+            for _, player in ipairs(players) do
+                DB.SetLastSeen(player.getIdentifier(), clearId)
+            end
+        end)
+        if not ok then
+            logMessage(('LastSeen update failed: %s'):format(tostring(err)))
+        end
+    end
+
+    return true
 end
 
 local function sendAlertFromPlayer(xPlayer, data)
@@ -144,7 +254,24 @@ local function sendAlertFromPlayer(xPlayer, data)
         return false, 'rate_limit'
     end
 
-    local alertPayload = buildAlertPayload(xPlayer, sanitized)
+    local expiresAt = resolveExpiry(data or {})
+    local autoClear = data.autoClear
+    if autoClear == nil then
+        autoClear = Config.AutoClear and Config.AutoClear.DefaultEnabled or false
+    end
+
+    local alertPayload = buildAlertPayload(xPlayer, {
+        title = sanitized.title,
+        message = sanitized.message,
+        severity = sanitized.severity,
+        category = sanitized.category,
+        expires_at = expiresAt,
+        is_active = 1,
+        cleared_at = nil,
+        cleared_by = nil,
+        alert_type = 'alert',
+        auto_clear = autoClear and 1 or 0
+    })
     local alertId = DB.CreateAlert(alertPayload)
     if not alertId then
         return false, 'db'
@@ -157,37 +284,16 @@ local function sendAlertFromPlayer(xPlayer, data)
         severity = alertPayload.severity,
         category = alertPayload.category,
         created_at = alertPayload.created_at,
-        created_by = alertPayload.created_by
+        created_by = alertPayload.created_by,
+        expires_at = alertPayload.expires_at,
+        is_active = alertPayload.is_active,
+        alert_type = alertPayload.alert_type
     }
 
-    local preview = alert.message
-    if #preview > 140 then
-        preview = preview:sub(1, 140) .. '...'
-    end
-
-    local notifyPayload = {
-        app = Config.App.Identifier,
-        title = 'DESPS CRITICAL ALERT',
-        message = preview,
-        icon = Config.App.Icon,
-        duration = 15000,
-        type = 'critical'
-    }
-
-    if exports['lb-phone'] and exports['lb-phone'].NotifyEveryone then
-        local ok, success, err = pcall(function()
-            return exports['lb-phone']:NotifyEveryone('all', notifyPayload)
-        end)
-        if not ok then
-            logMessage(('NotifyEveryone failed: %s'):format(success))
-        elseif success == false then
-            logMessage(('NotifyEveryone error: %s'):format(err or 'unknown'))
-        end
-    else
-        logMessage('NotifyEveryone export not available on lb-phone.')
-    end
+    sendNotification(alert, false)
 
     TriggerClientEvent('sal_public_alerts:newAlert', -1, alert)
+    TriggerClientEvent('sal_public_alerts:playAlarmSound', -1, { severity = alert.severity, scenarioId = alert.category })
 
     TriggerClientEvent('sal_public_alerts:sendResult', xPlayer.source, true)
     TriggerClientEvent('sal_public_alerts:sendAck', xPlayer.source, true, 'sent')
@@ -210,6 +316,10 @@ local function sendAlertFromPlayer(xPlayer, data)
                 refDistance = sirenConfig.refDistance
             })
         end
+    end
+
+    if autoClear and expiresAt then
+        scheduleAutoClear(alertId, expiresAt)
     end
 
     local ok, err = pcall(function()
@@ -254,12 +364,34 @@ RegisterNetEvent('sal_public_alerts:sendAlert', function(data)
     end
 end)
 
+RegisterNetEvent('sal_public_alerts:clearAlert', function(alertId)
+    local xPlayer = ESX.GetPlayerFromId(source)
+    if not xPlayer then
+        return
+    end
+
+    if not isSenderAllowed(xPlayer) then
+        TriggerClientEvent('sal_public_alerts:clearResult', source, false, 'permission')
+        return
+    end
+
+    local ok, err = clearAlert(tonumber(alertId), xPlayer.getIdentifier(), false)
+    if not ok then
+        TriggerClientEvent('sal_public_alerts:clearResult', source, false, err)
+        return
+    end
+
+    TriggerClientEvent('sal_public_alerts:clearResult', source, true)
+end)
+
 RegisterNetEvent('sal_public_alerts:fetchHistory', function(limit, offset)
     local src = source
     local safeLimit = math.min(tonumber(limit) or Config.HistoryLimit, Config.HistoryLimit)
     local safeOffset = math.max(tonumber(offset) or 0, 0)
-    local alerts = DB.FetchFeed(safeLimit, safeOffset)
-    TriggerClientEvent('sal_public_alerts:historyData', src, alerts)
+    local nowMs = os.time() * 1000
+    local active = DB.FetchActive(nowMs, safeLimit)
+    local history = DB.FetchFeed(safeLimit, safeOffset, nowMs)
+    TriggerClientEvent('sal_public_alerts:historyData', src, { active = active, history = history })
 end)
 
 RegisterNetEvent('sal_public_alerts:clientReady', function()
@@ -340,3 +472,22 @@ RegisterCommand('alerttest', function(src)
 
     TriggerClientEvent('sal_public_alerts:newAlert', src, alert)
 end, false)
+
+RegisterNetEvent('sal_public_alerts:autoClear', function(alertId)
+    clearAlert(tonumber(alertId), 'SYSTEM', true)
+end)
+
+AddEventHandler('onResourceStart', function(resource)
+    if resource ~= GetCurrentResourceName() then
+        return
+    end
+
+    CreateThread(function()
+        DB.EnsureSchema()
+        local nowMs = os.time() * 1000
+        local alerts = DB.FetchActiveForAutoClear(nowMs)
+        for _, alert in ipairs(alerts) do
+            scheduleAutoClear(alert.id, alert.expires_at)
+        end
+    end)
+end)

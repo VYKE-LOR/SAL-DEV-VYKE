@@ -3,6 +3,7 @@ local ESX = exports['es_extended']:getSharedObject()
 local appRegistered = false
 local phoneReady = false
 local playerLoaded = false
+local activeSirens = {}
 
 local function debugLog(message)
     if Config.Logging.Debug then
@@ -54,7 +55,8 @@ local function sendPhoneNotification(alert)
         icon = Config.App.Icon,
         duration = 15000,
         type = 'critical',
-        sound = false
+        sound = false,
+        silent = true
     }
 
     if exports['lb-phone'] and exports['lb-phone'].Notify then
@@ -67,38 +69,73 @@ local function sendPhoneNotification(alert)
 end
 
 local function buildSoundUrl()
-    return ('https://cfx-nui-%s/%s'):format(GetCurrentResourceName(), Config.Sound.File)
+    return ('https://cfx-nui-%s/%s'):format(GetCurrentResourceName(), Config.AlarmSound.file)
 end
 
-local function playAlertSound()
-    if Config.Sound.UseNativeAudio and exports['lb-nativeaudio'] and exports['lb-nativeaudio'].PlaySound then
-        exports['lb-nativeaudio']:PlaySound(Config.Sound.NativeAudioName, Config.Sound.Volume)
-        SetTimeout(1500, function()
-            exports['lb-nativeaudio']:PlaySound(Config.Sound.NativeAudioName, Config.Sound.Volume)
+local function playSoundOnce(soundName, volume)
+    local durationMs = Config.AlarmSound.durationMs or 9000
+    local useNative = exports['lb-nativeaudio'] and exports['lb-nativeaudio'].PlaySound
+    local useXSound = exports['xsound']
+
+    local system = Config.AlarmSound.system
+    if system == 'native' and useNative then
+        exports['lb-nativeaudio']:PlaySound(soundName, volume)
+        return
+    end
+
+    if system == 'xsound' and useXSound then
+        exports['xsound']:PlayUrl(soundName, buildSoundUrl(), volume)
+        exports['xsound']:Distance(soundName, 1)
+        SetTimeout(durationMs, function()
+            if exports['xsound'] and exports['xsound'].Destroy then
+                exports['xsound']:Destroy(soundName)
+            end
         end)
         return
     end
 
-    if Config.Sound.UseXSound and exports['xsound'] then
-        exports['xsound']:PlayUrl('sal_public_alerts', buildSoundUrl(), Config.Sound.Volume)
-        exports['xsound']:Distance('sal_public_alerts', 1)
-        SetTimeout(1500, function()
-            exports['xsound']:PlayUrl('sal_public_alerts_repeat', buildSoundUrl(), Config.Sound.Volume)
-            exports['xsound']:Distance('sal_public_alerts_repeat', 1)
+    if system == 'nui' then
+        sendAppMessage({ event = 'sound:play', data = { url = buildSoundUrl(), volume = volume } })
+        return
+    end
+
+    if useNative then
+        exports['lb-nativeaudio']:PlaySound(soundName, volume)
+        return
+    end
+
+    if useXSound then
+        exports['xsound']:PlayUrl(soundName, buildSoundUrl(), volume)
+        exports['xsound']:Distance(soundName, 1)
+        SetTimeout(durationMs, function()
+            if exports['xsound'] and exports['xsound'].Destroy then
+                exports['xsound']:Destroy(soundName)
+            end
         end)
         return
     end
 
-    PlaySoundFrontend(-1, 'Beep_Red', 'DLC_HEIST_HACKING_SNAKE_SOUNDS', true)
-    SetTimeout(1500, function()
-        PlaySoundFrontend(-1, 'Beep_Red', 'DLC_HEIST_HACKING_SNAKE_SOUNDS', true)
-    end)
-    sendAppMessage({ event = 'sound:play', data = { url = buildSoundUrl(), volume = Config.Sound.Volume } })
+    sendAppMessage({ event = 'sound:play', data = { url = buildSoundUrl(), volume = volume } })
+end
+
+local function playAlarmSound()
+    local volume = Config.AlarmSound.volume
+    local repeatConfig = Config.AlarmSound.repeat or { enabled = false }
+    local totalRepeats = repeatConfig.enabled and (repeatConfig.times or 0) or 0
+    local intervalMs = repeatConfig.intervalMs or 1200
+    local baseName = ('sal_alert_%s'):format(math.random(1000, 9999))
+
+    playSoundOnce(baseName, volume)
+
+    for i = 1, totalRepeats do
+        SetTimeout(intervalMs * i, function()
+            playSoundOnce(('%s_%s'):format(baseName, i), volume)
+        end)
+    end
 end
 
 local function handleIncomingAlert(alert)
     sendPhoneNotification(alert)
-    playAlertSound()
 
     sendAppMessage({ event = 'alert:new', data = alert })
 end
@@ -190,12 +227,31 @@ RegisterNUICallback('sendAlert', function(data, cb)
     cb({ ok = true })
 end)
 
+RegisterNUICallback('clearAlert', function(data, cb)
+    if not data or not data.alertId then
+        cb({ ok = false, error = 'validation' })
+        return
+    end
+    local ok, err = pcall(function()
+        TriggerServerEvent('sal_public_alerts:clearAlert', data.alertId)
+    end)
+    if not ok then
+        cb({ ok = false, error = err or 'Internal error' })
+        return
+    end
+    cb({ ok = true })
+end)
+
 RegisterNetEvent('sal_public_alerts:historyData', function(alerts)
     sendAppMessage({ event = 'alert:history', data = alerts or {} })
 end)
 
 RegisterNetEvent('sal_public_alerts:sendResult', function(success, reason)
     sendAppMessage({ event = 'alert:sendResult', data = { success = success, reason = reason } })
+end)
+
+RegisterNetEvent('sal_public_alerts:clearResult', function(ok, err)
+    sendAppMessage({ event = 'alert:clearResult', data = { ok = ok, error = err } })
 end)
 
 RegisterNetEvent('sal_public_alerts:canSend', function(canSend)
@@ -222,6 +278,14 @@ RegisterNetEvent('sal_public_alerts:newAlert', function(alert)
     handleIncomingAlert(alert)
 end)
 
+RegisterNetEvent('sal_public_alerts:alertCleared', function(alertId)
+    sendAppMessage({ event = 'alert:cleared', data = alertId })
+end)
+
+RegisterNetEvent('sal_public_alerts:playAlarmSound', function()
+    playAlarmSound()
+end)
+
 RegisterNetEvent('sal_public_alerts:startSirens', function(payload)
     if not payload or not Config.Sirens or not Config.Sirens.enabled then
         return
@@ -243,6 +307,10 @@ RegisterNetEvent('sal_public_alerts:startSirens', function(payload)
         exports['xsound']:Distance(name, siren.maxDistance or payload.maxDistance or Config.Sirens.defaultMaxDistance)
     end
 
+    if payload.alertId then
+        activeSirens[payload.alertId] = names
+    end
+
     if payload.durationSeconds and payload.durationSeconds > 0 then
         SetTimeout(payload.durationSeconds * 1000, function()
             for _, name in ipairs(names) do
@@ -252,6 +320,40 @@ RegisterNetEvent('sal_public_alerts:startSirens', function(payload)
                     exports['xsound']:Stop(name)
                 end
             end
+            if payload.alertId then
+                activeSirens[payload.alertId] = nil
+            end
         end)
+    end
+end)
+
+RegisterNetEvent('sal_public_alerts:stopSirens', function(payload)
+    if not payload or not exports['xsound'] then
+        return
+    end
+
+    if payload.alertId and activeSirens[payload.alertId] then
+        for _, name in ipairs(activeSirens[payload.alertId]) do
+            if exports['xsound'].Destroy then
+                exports['xsound']:Destroy(name)
+            elseif exports['xsound'].Stop then
+                exports['xsound']:Stop(name)
+            end
+        end
+        activeSirens[payload.alertId] = nil
+        return
+    end
+
+    if payload.stopAll then
+        for alertId, names in pairs(activeSirens) do
+            for _, name in ipairs(names) do
+                if exports['xsound'].Destroy then
+                    exports['xsound']:Destroy(name)
+                elseif exports['xsound'].Stop then
+                    exports['xsound']:Stop(name)
+                end
+            end
+            activeSirens[alertId] = nil
+        end
     end
 end)

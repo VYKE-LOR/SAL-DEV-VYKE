@@ -37,6 +37,10 @@ Config.HistoryLimit = 25
 
 Config.OfflineReplayNotification = true
 
+Config.AutoClear = {
+    DefaultEnabled = false
+}
+
 Config.Scenarios = {
     {
         id = 'emergency_warning',
@@ -143,12 +147,16 @@ Config.Sirens = {
     }
 }
 
-Config.Sound = {
-    UseNativeAudio = true,
-    NativeAudioName = 'desps_critical_alarm',
-    UseXSound = true,
-    File = 'ui/sounds/alert.ogg',
-    Volume = 0.8
+Config.AlarmSound = {
+    system = 'native',
+    file = 'ui/sounds/critical_alarm.ogg',
+    volume = 0.85,
+    durationMs = 9000,
+    repeat = {
+        enabled = true,
+        times = 2,
+        intervalMs = 1200
+    }
 }
 
 Config.Logging = {
