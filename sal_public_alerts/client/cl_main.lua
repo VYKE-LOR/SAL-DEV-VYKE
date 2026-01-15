@@ -43,31 +43,6 @@ local function sendAppMessage(payload)
     exports['lb-phone']:SendCustomAppMessage(Config.App.Identifier, payload)
 end
 
-local function sendPhoneNotification(alert)
-    local preview = alert.message or ''
-    if #preview > 140 then
-        preview = preview:sub(1, 140) .. '...'
-    end
-    local notification = {
-        app = Config.App.Identifier,
-        title = 'DESPS CRITICAL ALERT',
-        message = preview ~= '' and preview or alert.title,
-        icon = Config.App.Icon,
-        duration = 15000,
-        type = 'critical',
-        sound = false,
-        silent = true
-    }
-
-    if exports['lb-phone'] and exports['lb-phone'].Notify then
-        exports['lb-phone']:Notify(notification)
-    elseif exports['lb-phone'] and exports['lb-phone'].notify then
-        exports['lb-phone']:notify(notification)
-    else
-        TriggerEvent('lb-phone:notify', notification)
-    end
-end
-
 local function buildSoundUrl()
     return ('https://cfx-nui-%s/%s'):format(GetCurrentResourceName(), Config.AlarmSound.file)
 end
@@ -135,8 +110,6 @@ local function playAlarmSound()
 end
 
 local function handleIncomingAlert(alert)
-    sendPhoneNotification(alert)
-
     sendAppMessage({ event = 'alert:new', data = alert })
 end
 
@@ -246,8 +219,8 @@ RegisterNetEvent('sal_public_alerts:historyData', function(alerts)
     sendAppMessage({ event = 'alert:history', data = alerts or {} })
 end)
 
-RegisterNetEvent('sal_public_alerts:sendResult', function(success, reason)
-    sendAppMessage({ event = 'alert:sendResult', data = { success = success, reason = reason } })
+RegisterNetEvent('sal_public_alerts:sendResult', function(result)
+    sendAppMessage({ event = 'alert:sendResult', data = result or { ok = false, error = 'unknown' } })
 end)
 
 RegisterNetEvent('sal_public_alerts:clearResult', function(ok, err)
@@ -270,9 +243,6 @@ RegisterNUICallback('getPermissions', function(_, cb)
     cb({ ok = true })
 end)
 
-RegisterNetEvent('sal_public_alerts:sendAck', function(ok, msg)
-    sendAppMessage({ event = 'alert:sendAck', data = { ok = ok, msg = msg } })
-end)
 
 RegisterNetEvent('sal_public_alerts:newAlert', function(alert)
     handleIncomingAlert(alert)

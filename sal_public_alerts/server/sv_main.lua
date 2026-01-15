@@ -161,7 +161,7 @@ local function sendNotification(alert, isClear)
     local notifyPayload = {
         app = Config.App.Identifier,
         title = isClear and 'DESPS ENTWARNUNG' or 'DESPS CRITICAL ALERT',
-        message = preview,
+        content = preview,
         icon = Config.App.Icon,
         duration = 15000,
         type = isClear and 'info' or 'critical',
@@ -178,6 +178,10 @@ local function sendNotification(alert, isClear)
         elseif success == false then
             logMessage(('NotifyEveryone error: %s'):format(err or 'unknown'))
         end
+
+        pcall(function()
+            exports['lb-phone']:NotifyEveryone('online', notifyPayload)
+        end)
     else
         logMessage('NotifyEveryone export not available on lb-phone.')
     end
@@ -295,8 +299,7 @@ local function sendAlertFromPlayer(xPlayer, data)
     TriggerClientEvent('sal_public_alerts:newAlert', -1, alert)
     TriggerClientEvent('sal_public_alerts:playAlarmSound', -1, { severity = alert.severity, scenarioId = alert.category })
 
-    TriggerClientEvent('sal_public_alerts:sendResult', xPlayer.source, true)
-    TriggerClientEvent('sal_public_alerts:sendAck', xPlayer.source, true, 'sent')
+    TriggerClientEvent('sal_public_alerts:sendResult', xPlayer.source, { ok = true })
 
     local sirenConfig = Config.Sirens
     if data.enableSirens and sirenConfig and sirenConfig.enabled then
@@ -358,8 +361,17 @@ RegisterNetEvent('sal_public_alerts:sendAlert', function(data)
 
     local ok, result = sendAlertFromPlayer(xPlayer, data or {})
     if not ok then
-        TriggerClientEvent('sal_public_alerts:sendResult', source, false, result)
-        TriggerClientEvent('sal_public_alerts:sendAck', source, false, result)
+        local message = result
+        if result == 'permission' then
+            message = 'Keine Berechtigung zum Senden.'
+        elseif result == 'rate_limit' then
+            message = 'Rate-Limit erreicht. Bitte warten.'
+        elseif result == 'validation' then
+            message = 'Bitte alle Felder korrekt ausfüllen.'
+        else
+            message = 'Fehler beim Senden.'
+        end
+        TriggerClientEvent('sal_public_alerts:sendResult', source, { ok = false, error = message })
         return
     end
 end)
@@ -456,7 +468,7 @@ RegisterCommand('alerttest', function(src)
     end
 
     if not isSenderAllowed(xPlayer) then
-        TriggerClientEvent('sal_public_alerts:sendResult', src, false, 'permission')
+        TriggerClientEvent('sal_public_alerts:sendResult', src, { ok = false, error = 'Keine Berechtigung zum Senden.' })
         return
     end
 

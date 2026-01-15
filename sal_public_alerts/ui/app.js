@@ -36,16 +36,8 @@ const sendButton = document.getElementById('send-alert');
 const sirenToggle = document.getElementById('alert-sirens');
 const detailOverlay = document.getElementById('detail-overlay');
 const detailClose = document.getElementById('detail-close');
-const confirmModal = document.getElementById('confirmModal');
-const confirmTitle = document.getElementById('confirm-title');
-const confirmText = document.getElementById('confirm-text');
-const confirmCancel = document.getElementById('confirmCancel');
-const confirmSend = document.getElementById('confirmSend');
 const audioElement = document.getElementById('alert-audio');
 const uiError = document.getElementById('ui-error');
-
-let pendingConfirmAction = null;
-let pendingClearId = null;
 
 if (statusEl) {
     statusEl.textContent = 'Lade Alerts...';
@@ -177,20 +169,7 @@ const updatePermissions = (canSend) => {
     renderFeed();
 };
 
-const openConfirm = () => {
-    if (confirmModal) {
-        confirmModal.hidden = false;
-    }
-};
-
-const closeConfirm = () => {
-    if (confirmModal) {
-        confirmModal.hidden = true;
-    }
-};
-
 const handleSendResult = (success, reason) => {
-    closeConfirm();
     if (success) {
         formStatus.textContent = 'Alarm gesendet.';
         resetForm();
@@ -199,18 +178,10 @@ const handleSendResult = (success, reason) => {
         return;
     }
 
-    switch (reason) {
-        case 'permission':
-            formStatus.textContent = 'Keine Berechtigung zum Senden.';
-            break;
-        case 'rate_limit':
-            formStatus.textContent = 'Rate-Limit erreicht. Bitte warten.';
-            break;
-        case 'validation':
-            formStatus.textContent = 'Bitte alle Felder korrekt ausfüllen.';
-            break;
-        default:
-            formStatus.textContent = 'Fehler beim Senden.';
+    if (reason) {
+        formStatus.textContent = reason;
+    } else {
+        formStatus.textContent = 'Fehler beim Senden.';
     }
     state.lastError = formStatus.textContent;
     renderUIState();
@@ -320,7 +291,6 @@ const renderUIState = () => {
 };
 
 const sendAlertRequest = () => {
-    closeConfirm();
     state.sending = true;
     state.lastError = null;
     renderUIState();
@@ -362,7 +332,6 @@ const sendAlertRequest = () => {
 };
 
 const sendClearRequest = (alertId) => {
-    closeConfirm();
     state.sending = true;
     state.lastError = null;
     renderUIState();
@@ -404,26 +373,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sheetClose) {
         sheetClose.addEventListener('click', () => {
             state.showSendSheet = false;
-            closeConfirm();
             renderUIState();
-        });
-    }
-
-    if (confirmCancel) {
-        confirmCancel.addEventListener('click', () => {
-            pendingConfirmAction = null;
-            pendingClearId = null;
-            closeConfirm();
-        });
-    }
-
-    if (confirmModal) {
-        confirmModal.addEventListener('click', (event) => {
-            if (event.target === confirmModal) {
-                pendingConfirmAction = null;
-                pendingClearId = null;
-                closeConfirm();
-            }
         });
     }
 
@@ -475,29 +425,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 formStatus.textContent = 'Bitte ein Szenario auswählen.';
                 return;
             }
-            pendingConfirmAction = 'send';
-            pendingClearId = null;
-            if (confirmTitle) {
-                confirmTitle.textContent = 'Alarm wirklich senden?';
-            }
-            if (confirmText) {
-                confirmText.textContent = 'Diese Meldung wird an die gesamte Bevölkerung gesendet.';
-            }
-            openConfirm();
-        });
-    }
-
-    if (confirmSend) {
-        confirmSend.addEventListener('click', () => {
-            closeConfirm();
-            const action = pendingConfirmAction;
-            const alertId = pendingClearId;
-            pendingConfirmAction = null;
-            pendingClearId = null;
-            if (action === 'clear' && alertId) {
-                sendClearRequest(alertId);
-                return;
-            }
             sendAlertRequest();
         });
     }
@@ -509,15 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             event.stopPropagation();
-            pendingConfirmAction = 'clear';
-            pendingClearId = Number(target.dataset.alertId);
-            if (confirmTitle) {
-                confirmTitle.textContent = 'Alarm aufheben?';
-            }
-            if (confirmText) {
-                confirmText.textContent = 'Es wird eine Entwarnung an alle gesendet.';
-            }
-            openConfirm();
+            sendClearRequest(Number(target.dataset.alertId));
         });
     }
 });
@@ -564,25 +483,13 @@ window.addEventListener('message', (event) => {
             renderAreaOptions();
             break;
         case 'alert:sendResult':
-            handleSendResult(payload.data && payload.data.success, payload.data && payload.data.reason);
+            handleSendResult(payload.data && payload.data.ok, payload.data && payload.data.error);
             break;
         case 'alert:clearResult':
-            closeConfirm();
             if (payload.data && payload.data.ok) {
                 formStatus.textContent = 'Entwarnung gesendet.';
             } else {
                 state.lastError = payload.data && payload.data.error ? payload.data.error : 'Entwarnung fehlgeschlagen.';
-            }
-            renderUIState();
-            break;
-        case 'alert:sendAck':
-            closeConfirm();
-            if (payload.data && payload.data.ok) {
-                formStatus.textContent = 'Alarm gesendet.';
-                resetForm();
-                state.showSendSheet = false;
-            } else if (payload.data) {
-                state.lastError = payload.data.msg || 'Senden fehlgeschlagen.';
             }
             renderUIState();
             break;
@@ -600,7 +507,6 @@ postNui('fetchHistory', { limit: 25, offset: 0 });
 renderUIState();
 
 window.onerror = (message) => {
-    closeConfirm();
     if (!statusEl) {
         return;
     }
@@ -610,7 +516,3 @@ window.onerror = (message) => {
         uiError.textContent = `UI Error: ${message}`;
     }
 };
-
-window.addEventListener('unhandledrejection', () => {
-    closeConfirm();
-});

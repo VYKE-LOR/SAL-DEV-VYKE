@@ -148,7 +148,7 @@ Config.Sirens = {
 }
 
 Config.AlarmSound = {
-    system = 'native',
+    system = 'xsound',
     file = 'ui/sounds/critical_alarm.ogg',
     volume = 0.85,
     durationMs = 9000,
