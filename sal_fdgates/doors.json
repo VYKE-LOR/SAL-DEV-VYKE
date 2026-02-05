@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "nextDoorId": 1,
+  "nextPanelId": 1,
+  "doors": [],
+  "panels": [],
+  "states": {}
+}
