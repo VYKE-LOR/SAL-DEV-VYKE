@@ -1,52 +1,37 @@
 # sal_fdgates
 
-Server-authoritative Fire Department Gate Resource für ESX Legacy mit JSON-Persistenz, optionalen `ox_target` Panels und Ingame-Editor.
-
 ## Abhängigkeiten
 - `es_extended`
+- `ox_lib`
 - `xsound`
-- optional `ox_target`
+- `ox_target`
 
-## Features
-- Einzelne Tore öffnen/schließen
-- Alle Tore auf einmal öffnen/schließen
-- Vollsync für alle Spieler inkl. Spät-Joiner
-- xSound positional Beep bei Statuswechsel
-- Ingame-Editor mit Raycast-Pick + 3D-Highlight + Panel-Platzierung
-- JSON Speichern/Laden via `SaveResourceFile` und `LoadResourceFile`
+## Setup
+1. Resource starten.
+2. Command ausführen: `/fdgates`.
+3. Türen/Panels im Menü verwalten.
 
-## Commands
-### Betrieb
-- `/fdgate <id> open`
-- `/fdgate <id> close`
-- `/fdgate all open`
-- `/fdgate all close`
+## Command
+- `/fdgates` öffnet das komplette UI-Menü.
 
-### Editor
-- `/fdgeditor` (Editor an/aus)
-- `/fdgatedeldoor <id>`
-- `/fdgatepanel door <doorId>`
-- `/fdgatepanel all`
-- `/fdgatedelpanel <panelId>`
+## Menüfunktionen
+- Einzelne Tore öffnen/schließen/toggle
+- Alle Tore öffnen/schließen
+- Panel-Liste mit Waypoint
+- Editor-Bereich (rechtebasiert)
 
-## Editor-Steuerung
-1. Editor per `/fdgeditor` aktivieren.
-2. Mit Kamera auf gewünschte Tür/Objekt zielen.
-3. `E` drücken, um aktuelle Entity als neue Door zu speichern.
-4. Panel setzen:
-   - `/fdgatepanel door <doorId>` oder `/fdgatepanel all`
-   - Auf Zielposition schauen und `E` drücken.
-5. Löschen über Delete-Commands.
+## Editor
+- Editor im Menü an/aus
+- Raycast-Highlight aktiv nur im Editor
+- `E` auf anvisierte Entity: Tür hinzufügen
+- Panel setzen: `door`, `all`, `red`
+- Tür/Panel löschen über ID im Menü
+- Panel-Preview im Menü an/aus
 
-Wenn `Config.Editor.Enabled = false`, sind alle Editor-Funktionen serverseitig blockiert.
+## Sound
+- Tür-Beep bei echtem Statuswechsel
+- Roter Knopf: Alle Tore öffnen + Wachen-Alarm (3D)
+- xSound-Quellen in `config.lua` konfigurieren
 
-## xSound Hinweis
-`Config.Sound.Url` muss auf eine verfügbare Soundquelle zeigen (z. B. direkte URL oder von xSound auflösbare Quelle). Das Resource nutzt pro Schaltvorgang einen eindeutigen Sound-Key, setzt Reichweite und zerstört den Sound nach `DestroyMs`, damit keine Instanzen hängen bleiben.
-
-## Konfiguration
-In `config.lua`:
-- `FireJob`, `MinGrade`
-- `AdminGroups`
-- `DefaultDoorRate`, `DefaultOpenRatio`
-- `Sound` (`Url`, `Identifier`, `Volume`, `Distance`, `DestroyMs`)
-- `Editor` (`Enabled`, `AllowEveryone`, `AllowJob`)
+## Persistenz
+- Türen, Panels, States in `doors.json` via `LoadResourceFile` / `SaveResourceFile`
