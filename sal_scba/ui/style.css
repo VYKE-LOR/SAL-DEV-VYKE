@@ -1,0 +1,112 @@
+/* HARD-FIX: absolutely no backgrounds anywhere */
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Prevent any accidental paint */
+* {
+  box-sizing: border-box;
+}
+
+.hidden { display: none !important; }
+
+/* Root is HARD HIDDEN until JS explicitly enables it */
+#sal-root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+
+  display: none !important;      /* HARD FIX: default hidden */
+  background: transparent !important;
+}
+
+/* HUD */
+#sal-hud {
+  position: fixed;
+  left: 24px;
+  bottom: 24px;
+  width: 260px;
+  pointer-events: none;
+}
+
+#sal-card {
+  border-radius: 16px;
+  padding: 14px 14px 12px 14px;
+  background: rgba(10, 10, 12, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  color: rgba(255,255,255,0.92);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+}
+
+#sal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+#sal-title {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  opacity: 0.9;
+}
+
+#sal-status {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+#sal-bar-wrap {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.10);
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+#sal-bar {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.85);
+  transition: width 120ms linear;
+}
+
+#sal-meta {
+  display: flex;
+  gap: 6px;
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+#sal-warn {
+  margin-top: 10px;
+  font-size: 12px;
+  opacity: 0.95;
+}
+
+/* Vignette: default OFF (invisible) */
+#sal-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at center, rgba(0,0,0,0) 56%, rgba(0,0,0,0.55) 100%);
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+/* When ON, only then visible */
+.vignette-on { opacity: 0.35; }
+.vignette-off { opacity: 0; }

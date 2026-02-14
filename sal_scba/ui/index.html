@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <title>SAL SCBA</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <!-- Root wrapper is ALWAYS hidden unless explicitly enabled by Lua message -->
+  <div id="sal-root" aria-hidden="true">
+    <div id="sal-hud" class="hidden">
+      <div id="sal-card">
+        <div id="sal-row">
+          <div id="sal-title">SCBA</div>
+          <div id="sal-status"></div>
+        </div>
+
+        <div id="sal-bar-wrap">
+          <div id="sal-bar"></div>
+        </div>
+
+        <div id="sal-meta">
+          <span id="sal-pressure">0</span>
+          <span id="sal-unit"></span>
+        </div>
+
+        <div id="sal-warn" class="hidden"></div>
+      </div>
+    </div>
+
+    <!-- Vignette is separate and default fully invisible -->
+    <div id="sal-vignette" class="vignette-off"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
