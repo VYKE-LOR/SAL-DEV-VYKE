@@ -120,11 +120,7 @@ Config.Hazards = {
 }
 
 Config.Props = {
-    EnableBackProp = true,
-    BackPropModel = `p_s_scba_s`,
-    BackBone = 24818,
-    BackOffset = vec3(-0.05, -0.18, 0.0),
-    BackRotation = vec3(0.0, 90.0, 180.0)
+    EnableBackProp = false -- deprecated: visuals now use clothing component swaps only
 }
 
 Config.Locales = {

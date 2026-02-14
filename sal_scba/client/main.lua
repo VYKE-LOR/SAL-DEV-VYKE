@@ -16,17 +16,19 @@ local State = {
 local Threads = {
     pressure = nil,
     hazards = nil,
-    controls = nil,
     pass = nil
 }
 
-local backProp = nil
 local lastCoughAt = 0
 local nextDamageAt = 0
 local submixId = nil
 
 local function notify(msg)
     lib.notify({ description = msg, type = 'inform' })
+end
+
+local function applyVisualState()
+    Visuals:ApplyOutfitState(State.scbaEquipped, State.maskOn)
 end
 
 local function setSubmixEnabled(enabled)
@@ -46,7 +48,8 @@ local function setSubmixEnabled(enabled)
     end
 
     if submixId and submixId ~= -1 then
-        SetAudioSubmixOutputVolumes(submixId, 0, enabled and Config.AudioMuffle.FilterStrength or 1.0, enabled and Config.AudioMuffle.FilterStrength or 1.0, enabled and Config.AudioMuffle.FilterStrength or 1.0, enabled and Config.AudioMuffle.FilterStrength or 1.0, enabled and Config.AudioMuffle.FilterStrength or 1.0, enabled and Config.AudioMuffle.FilterStrength or 1.0)
+        local volume = enabled and Config.AudioMuffle.FilterStrength or 1.0
+        SetAudioSubmixOutputVolumes(submixId, 0, volume, volume, volume, volume, volume, volume)
     end
 end
 
@@ -77,48 +80,16 @@ local function updateLowAirState()
 end
 
 local function pushHud()
+    local visible = State.hudEnabled and State.scbaEquipped
     UI:Push({
+        hud = visible,
         pressure = State.pressure,
         maxPressure = Config.SCBA.MaxPressure,
         lowAirState = State.lowAirState,
         maskOn = State.maskOn,
         passAlarm = State.passAlarm
     })
-    UI:SetVisible(State.hudEnabled and State.scbaEquipped)
-end
-
-local function clearBackProp()
-    if backProp and DoesEntityExist(backProp) then
-        DeleteEntity(backProp)
-    end
-    backProp = nil
-end
-
-local function refreshBackProp()
-    clearBackProp()
-
-    if not (State.scbaEquipped and Config.Props.EnableBackProp) then
-        return
-    end
-
-    local ped = PlayerPedId()
-    local model = Config.Props.BackPropModel
-    RequestModel(model)
-
-    local timeout = GetGameTimer() + 5000
-    while not HasModelLoaded(model) and GetGameTimer() < timeout do
-        Wait(50)
-    end
-
-    if not HasModelLoaded(model) then
-        return
-    end
-
-    local coords = GetEntityCoords(ped)
-    backProp = CreateObject(model, coords.x, coords.y, coords.z, false, false, false)
-    SetEntityCollision(backProp, false, false)
-    AttachEntityToEntity(backProp, ped, GetPedBoneIndex(ped, Config.Props.BackBone), Config.Props.BackOffset.x, Config.Props.BackOffset.y, Config.Props.BackOffset.z, Config.Props.BackRotation.x, Config.Props.BackRotation.y, Config.Props.BackRotation.z, true, true, false, true, 2, true)
-    SetModelAsNoLongerNeeded(model)
+    UI:SetVisible(visible)
 end
 
 local function startPressureThread()
@@ -166,10 +137,8 @@ end
 local function isInHazardZone(coords)
     for i = 1, #Config.Hazards.CustomZones do
         local zone = Config.Hazards.CustomZones[i]
-        if zone.type == 'sphere' then
-            if #(coords - zone.center) <= zone.radius then
-                return zone.level or 1
-            end
+        if zone.type == 'sphere' and #(coords - zone.center) <= zone.radius then
+            return zone.level or 1
         end
     end
 
@@ -205,8 +174,7 @@ local function startHazardThread()
 
     Threads.hazards = CreateThread(function()
         while State.scbaEquipped do
-            local interval = Config.Hazards.FireDetection.CheckIntervalMs
-            Wait(interval)
+            Wait(Config.Hazards.FireDetection.CheckIntervalMs)
 
             local ped = PlayerPedId()
             if IsEntityDead(ped) then
@@ -219,12 +187,11 @@ local function startHazardThread()
             if not State.maskOn and Config.Hazards.FireDetection.Enabled then
                 local fireCount = GetNumberOfFiresInRange(coords.x, coords.y, coords.z, Config.Hazards.FireDetection.Radius)
                 if fireCount > 0 then
-                    hazardLevel = math.max(hazardLevel, 1)
+                    hazardLevel = 1
                 end
             end
 
             hazardLevel = math.max(hazardLevel, isInHazardZone(coords))
-
             if State.hazardUntil > GetGameTimer() then
                 hazardLevel = math.max(hazardLevel, State.localHazardBoost)
             end
@@ -247,15 +214,12 @@ local function startPassThread()
 
     Threads.pass = CreateThread(function()
         local idleSince = GetGameTimer()
+
         while State.scbaEquipped and State.passArmed do
             Wait(1000)
 
             local ped = PlayerPedId()
-            if IsPedInAnyVehicle(ped, false) then
-                idleSince = GetGameTimer()
-            end
-
-            if GetEntitySpeed(ped) > 0.15 then
+            if IsPedInAnyVehicle(ped, false) or GetEntitySpeed(ped) > 0.15 then
                 idleSince = GetGameTimer()
                 if State.passAlarm then
                     State.passAlarm = false
@@ -286,8 +250,7 @@ local function getVehicleRefillPoint(vehicle)
     local pedCoords = GetEntityCoords(PlayerPedId())
 
     for i = 1, #Config.Refill.VehicleBoneCandidates do
-        local boneName = Config.Refill.VehicleBoneCandidates[i]
-        local boneIndex = GetEntityBoneIndexByName(vehicle, boneName)
+        local boneIndex = GetEntityBoneIndexByName(vehicle, Config.Refill.VehicleBoneCandidates[i])
         if boneIndex ~= -1 then
             local boneCoords = GetWorldPositionOfEntityBone(vehicle, boneIndex)
             if #(pedCoords - boneCoords) <= Config.Refill.Distance then
@@ -297,7 +260,8 @@ local function getVehicleRefillPoint(vehicle)
     end
 
     for i = 1, #Config.Refill.FallbackOffsets do
-        local world = GetOffsetFromEntityInWorldCoords(vehicle, Config.Refill.FallbackOffsets[i].x, Config.Refill.FallbackOffsets[i].y, Config.Refill.FallbackOffsets[i].z)
+        local o = Config.Refill.FallbackOffsets[i]
+        local world = GetOffsetFromEntityInWorldCoords(vehicle, o.x, o.y, o.z)
         if #(pedCoords - world) <= Config.Refill.Distance then
             return world
         end
@@ -311,16 +275,9 @@ local function tryRefill()
         return
     end
 
-    local ped = PlayerPedId()
-    local coords = GetEntityCoords(ped)
+    local coords = GetEntityCoords(PlayerPedId())
     local vehicle = lib.getClosestVehicle(coords, 8.0, false)
-    if not vehicle or vehicle == 0 then
-        notify(Config.Locales.RefillInvalid)
-        return
-    end
-
-    local point = getVehicleRefillPoint(vehicle)
-    if not point then
+    if not vehicle or vehicle == 0 or not getVehicleRefillPoint(vehicle) then
         notify(Config.Locales.RefillInvalid)
         return
     end
@@ -330,40 +287,16 @@ local function tryRefill()
         return
     end
 
-    local duration = math.floor(missing * Config.Refill.DurationPerUnitMs)
-
     local ok = lib.progressBar({
-        duration = duration,
+        duration = math.floor(missing * Config.Refill.DurationPerUnitMs),
         label = 'Refilling SCBA...',
         useWhileDead = false,
         canCancel = true,
         disable = { car = true, combat = true, sprint = true, move = true }
     })
 
-    if not ok then
-        return
-    end
-
-    TriggerServerEvent('sal_scba:server:requestRefill', VehToNet(vehicle))
-end
-
-local function setEquipped(state)
-    State.scbaEquipped = state
-    if not state then
-        State.maskOn = false
-        State.passArmed = false
-        setSubmixEnabled(false)
-    end
-
-    refreshBackProp()
-    pushHud()
-
-    if state then
-        startPressureThread()
-        startHazardThread()
-        if State.passArmed then
-            startPassThread()
-        end
+    if ok then
+        TriggerServerEvent('sal_scba:server:requestRefill', VehToNet(vehicle))
     end
 end
 
@@ -375,8 +308,8 @@ RegisterNetEvent('sal_scba:client:setState', function(serverState)
     State.passArmed = serverState.passArmed == true
 
     updateLowAirState()
-    refreshBackProp()
     setSubmixEnabled(State.maskOn)
+    applyVisualState()
     pushHud()
 
     if State.scbaEquipped then
@@ -390,12 +323,6 @@ end)
 
 RegisterNetEvent('sal_scba:client:notify', function(message)
     notify(message)
-end)
-
-RegisterNetEvent('sal_scba:client:applyPressure', function(value)
-    State.pressure = tonumber(value) or State.pressure
-    updateLowAirState()
-    pushHud()
 end)
 
 RegisterNetEvent('sal_scba:client:refillDone', function(newPressure)
@@ -416,8 +343,9 @@ local function handleHotkeys()
     end
 
     if IsControlJustPressed(0, Config.Keys.ToggleMask) and State.scbaEquipped then
+        local nextMask = not State.maskOn
         TriggerServerEvent('sal_scba:server:toggleMask')
-        Sound:PlayFrontend(State.maskOn and 'MaskOff' or 'MaskOn', 0.3)
+        Sound:PlayFrontend(nextMask and 'MaskOn' or 'MaskOff', 0.3)
     end
 
     if IsControlJustPressed(0, Config.Keys.Refill) then
@@ -451,18 +379,25 @@ AddEventHandler('gameEventTriggered', function(name, args)
         return
     end
 
-    local victim = args[1]
-    if victim ~= PlayerPedId() then
-        return
-    end
-
-    if IsEntityDead(victim) then
+    if args[1] == PlayerPedId() and IsEntityDead(args[1]) then
         State.dead = true
         State.maskOn = false
         setSubmixEnabled(false)
+        applyVisualState()
         pushHud()
     end
 end)
+
+local function resetVisualsForSpawn()
+    State.scbaEquipped = false
+    State.maskOn = false
+    State.passArmed = false
+    State.passAlarm = false
+    setSubmixEnabled(false)
+    Visuals:ResetToCurrentPedOutfit()
+    pushHud()
+    TriggerServerEvent('sal_scba:server:syncMe')
+end
 
 AddEventHandler('onClientResourceStart', function(res)
     if res ~= GetCurrentResourceName() then
@@ -470,7 +405,20 @@ AddEventHandler('onClientResourceStart', function(res)
     end
 
     UI:Reset()
+    Visuals:ResetToCurrentPedOutfit()
     TriggerServerEvent('sal_scba:server:syncMe')
+end)
+
+AddEventHandler('playerSpawned', function()
+    resetVisualsForSpawn()
+end)
+
+RegisterNetEvent('esx:onPlayerSpawn', function()
+    resetVisualsForSpawn()
+end)
+
+RegisterNetEvent('esx:playerLoaded', function()
+    resetVisualsForSpawn()
 end)
 
 AddEventHandler('onClientResourceStop', function(res)
@@ -478,7 +426,7 @@ AddEventHandler('onClientResourceStop', function(res)
         return
     end
 
-    clearBackProp()
+    Visuals:RestoreOriginalOutfit(false)
     setSubmixEnabled(false)
     UI:Reset()
 end)
