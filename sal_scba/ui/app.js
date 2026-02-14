@@ -1,102 +1,128 @@
-const root = document.getElementById('scba-root');
-const hudCard = document.getElementById('hudCard');
-const pressureValue = document.getElementById('pressureValue');
-const status = document.getElementById('status');
-const bar = document.getElementById('bar');
-const maskFlag = document.getElementById('maskFlag');
-const passFlag = document.getElementById('passFlag');
-const warnBanner = document.getElementById('warnBanner');
-const vignette = document.getElementById('vignette');
+(() => {
+  "use strict";
 
-const uiState = {
-  visible: false,
-  hud: false,
-  maskOn: false,
-  pressure: 0,
-  maxPressure: 100,
-  lowAirState: 'none',
-  passAlarm: false,
-};
+  const root = document.getElementById("sal-root");
+  const hud = document.getElementById("sal-hud");
+  const bar = document.getElementById("sal-bar");
+  const statusEl = document.getElementById("sal-status");
+  const pressureEl = document.getElementById("sal-pressure");
+  const unitEl = document.getElementById("sal-unit");
+  const warnEl = document.getElementById("sal-warn");
+  const vignette = document.getElementById("sal-vignette");
 
-const dangerStates = new Set(['low', 'verylow', 'empty']);
+  let state = {
+    visible: false,
+    hud: false,
+    maskOn: false,
+    pressure: 0,
+    maxPressure: 100,
+    unit: "",
+    status: "",
+    warn: "",
+  };
 
-function syncVisibility() {
-  const showRoot = uiState.visible || uiState.maskOn;
-  root.classList.toggle('visible', showRoot);
-  root.classList.toggle('hidden', !showRoot);
-  root.setAttribute('aria-hidden', String(!showRoot));
+  // HARD HIDE – ensures no grey overlay, ever
+  function hardHide() {
+    // force transparent on document
+    document.documentElement.style.background = "transparent";
+    document.body.style.background = "transparent";
 
-  hudCard.classList.toggle('hidden', !(uiState.visible && uiState.hud));
-  vignette.classList.toggle('active', uiState.maskOn);
-}
+    // hard-hide root no matter what CSS does
+    root.style.setProperty("display", "none", "important");
+    root.setAttribute("aria-hidden", "true");
 
-function updateHud() {
-  pressureValue.textContent = `${uiState.pressure.toFixed(1)} / ${uiState.maxPressure}`;
+    // also force vignette off
+    vignette.classList.remove("vignette-on");
+    vignette.classList.add("vignette-off");
 
-  const percent = Math.max(0, Math.min(100, (uiState.pressure / uiState.maxPressure) * 100));
-  bar.style.width = `${percent}%`;
-
-  if (uiState.lowAirState === 'none') {
-    status.textContent = 'READY';
-    bar.style.background = 'linear-gradient(90deg, #24b6ff, #6df8ff)';
-  } else if (uiState.lowAirState === 'low') {
-    status.textContent = 'LOW AIR';
-    bar.style.background = 'linear-gradient(90deg, #f4b740, #ffe37d)';
-  } else if (uiState.lowAirState === 'verylow') {
-    status.textContent = 'VERY LOW';
-    bar.style.background = 'linear-gradient(90deg, #ff8d57, #ff5f5f)';
-  } else {
-    status.textContent = 'EMPTY';
-    bar.style.background = 'linear-gradient(90deg, #ff5f5f, #ff2f2f)';
+    hud.classList.add("hidden");
+    warnEl.classList.add("hidden");
   }
 
-  status.className = `status status-${uiState.lowAirState}`;
-
-  maskFlag.classList.toggle('active', uiState.maskOn);
-  passFlag.classList.toggle('active', uiState.passAlarm);
-
-  const warn = dangerStates.has(uiState.lowAirState);
-  warnBanner.classList.toggle('hidden', !warn);
-  warnBanner.classList.toggle('flash', warn);
-  warnBanner.textContent = uiState.lowAirState === 'empty' ? 'OUT OF AIR' : 'LOW AIR';
-}
-
-window.addEventListener('message', (event) => {
-  const data = event.data;
-  if (!data || !data.type) return;
-
-  if (data.type === 'scba:setVisible') {
-    uiState.visible = !!data.visible;
-    syncVisibility();
-    return;
+  // HARD SHOW – only when allowed
+  function hardShow() {
+    root.style.setProperty("display", "block", "important");
+    root.setAttribute("aria-hidden", "false");
   }
 
-  if (data.type === 'scba:setMask') {
-    uiState.maskOn = !!data.on;
-    syncVisibility();
-    updateHud();
-    return;
+  function apply() {
+    // Root visibility gate
+    if (!state.visible) {
+      hardHide();
+      return;
+    }
+
+    hardShow();
+
+    // HUD gate
+    if (state.hud) hud.classList.remove("hidden");
+    else hud.classList.add("hidden");
+
+    // Vignette gate
+    vignette.classList.toggle("vignette-on", !!state.maskOn);
+    vignette.classList.toggle("vignette-off", !state.maskOn);
+
+    // Pressure UI
+    const maxP = Math.max(1, Number(state.maxPressure) || 100);
+    const p = Math.max(0, Math.min(maxP, Number(state.pressure) || 0));
+    const pct = Math.max(0, Math.min(100, (p / maxP) * 100));
+
+    bar.style.width = `${pct.toFixed(1)}%`;
+    pressureEl.textContent = `${Math.round(p)}`;
+    unitEl.textContent = state.unit || "";
+    statusEl.textContent = state.status || "";
+
+    if (state.warn && state.warn.length > 0) {
+      warnEl.textContent = state.warn;
+      warnEl.classList.remove("hidden");
+    } else {
+      warnEl.textContent = "";
+      warnEl.classList.add("hidden");
+    }
   }
 
-  if (data.type === 'scba:update') {
-    Object.assign(uiState, data.payload || {});
-    syncVisibility();
-    updateHud();
-    return;
-  }
+  // On load: HARD HIDE instantly
+  hardHide();
 
-  if (data.type === 'scba:reset') {
-    uiState.visible = false;
-    uiState.hud = false;
-    uiState.maskOn = false;
-    uiState.pressure = 0;
-    uiState.maxPressure = 100;
-    uiState.lowAirState = 'none';
-    uiState.passAlarm = false;
-    syncVisibility();
-    updateHud();
-  }
-});
+  // Extra failsafe for race conditions (runs briefly, then stops)
+  let t = 0;
+  const guard = setInterval(() => {
+    t += 1;
+    if (!state.visible) hardHide();
+    if (t >= 15) clearInterval(guard); // ~1.5s then stop
+  }, 100);
 
-syncVisibility();
-updateHud();
+  window.addEventListener("message", (event) => {
+    const d = event.data || {};
+    if (!d.type) return;
+
+    // absolute kill switch
+    if (d.type === "scba:hardHide") {
+      state.visible = false;
+      state.hud = false;
+      state.maskOn = false;
+      apply();
+      return;
+    }
+
+    if (d.type === "scba:visibility") {
+      state.visible = !!d.visible;
+      state.hud = !!d.hud;
+      apply();
+      return;
+    }
+
+    if (d.type === "scba:update") {
+      // Only accept known fields
+      if (typeof d.hud === "boolean") state.hud = d.hud;
+      if (typeof d.maskOn === "boolean") state.maskOn = d.maskOn;
+      if (d.pressure != null) state.pressure = d.pressure;
+      if (d.maxPressure != null) state.maxPressure = d.maxPressure;
+      if (d.unit != null) state.unit = String(d.unit);
+      if (d.status != null) state.status = String(d.status);
+      if (d.warn != null) state.warn = String(d.warn);
+      apply();
+      return;
+    }
+  });
+})();

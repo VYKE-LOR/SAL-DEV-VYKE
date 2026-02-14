@@ -1,128 +1,112 @@
-:root {
-    color-scheme: dark;
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+/* HARD-FIX: absolutely no backgrounds anywhere */
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+
+  background: transparent !important;
+  background-color: transparent !important;
 }
 
+/* Prevent any accidental paint */
 * {
-    box-sizing: border-box;
-    user-select: none;
+  box-sizing: border-box;
 }
 
-html,
-body {
-    margin: 0;
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
-    background: transparent;
+.hidden { display: none !important; }
+
+/* Root is HARD HIDDEN until JS explicitly enables it */
+#sal-root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+
+  display: none !important;      /* HARD FIX: default hidden */
+  background: transparent !important;
 }
 
-.scba-root {
-    position: fixed;
-    inset: 0;
-    display: none;
-    pointer-events: none;
-    background: transparent;
+/* HUD */
+#sal-hud {
+  position: fixed;
+  left: 24px;
+  bottom: 24px;
+  width: 260px;
+  pointer-events: none;
 }
 
-.scba-root.visible {
-    display: block;
+#sal-card {
+  border-radius: 16px;
+  padding: 14px 14px 12px 14px;
+  background: rgba(10, 10, 12, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  color: rgba(255,255,255,0.92);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
 }
 
-.hud-card {
-    position: absolute;
-    right: 2.4rem;
-    bottom: 2.2rem;
-    width: 300px;
-    padding: 14px;
-    border-radius: 14px;
-    border: 1px solid rgba(125, 210, 255, 0.2);
-    background: linear-gradient(180deg, rgba(16, 23, 32, 0.92), rgba(10, 14, 20, 0.88));
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+#sal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
 }
 
-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
+#sal-title {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  opacity: 0.9;
 }
 
-.label { margin: 0; font-size: 0.75rem; letter-spacing: 0.15em; color: rgba(194, 227, 255, 0.85); }
-.status { margin: 0; font-weight: 700; font-size: 0.73rem; letter-spacing: 0.1em; }
-.status-none { color: #8dcfff; }
-.status-low { color: #ffd761; }
-.status-verylow,
-.status-empty { color: #ff6868; }
-
-.pressure-meta {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.78rem;
-    color: rgba(217, 235, 255, 0.9);
-    margin-bottom: 6px;
+#sal-status {
+  font-size: 12px;
+  opacity: 0.85;
 }
 
-.bar-wrap {
-    width: 100%;
-    height: 11px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.08);
-    overflow: hidden;
+#sal-bar-wrap {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.10);
+  overflow: hidden;
+  margin-bottom: 8px;
 }
 
-.bar-fill {
-    height: 100%;
-    width: 0%;
-    border-radius: inherit;
-    transition: width 220ms linear, background-color 180ms ease;
-    background: linear-gradient(90deg, #24b6ff, #6df8ff);
+#sal-bar {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.85);
+  transition: width 120ms linear;
 }
 
-.flags { margin-top: 12px; display: flex; gap: 8px; }
-.flag {
-    font-size: 0.68rem;
-    letter-spacing: 0.09em;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    color: rgba(214, 231, 247, 0.6);
-    padding: 4px 9px;
+#sal-meta {
+  display: flex;
+  gap: 6px;
+  font-size: 12px;
+  opacity: 0.9;
 }
 
-.flag.active {
-    color: #fff;
-    border-color: rgba(94, 233, 255, 0.88);
-    box-shadow: 0 0 12px rgba(87, 220, 255, 0.5);
+#sal-warn {
+  margin-top: 10px;
+  font-size: 12px;
+  opacity: 0.95;
 }
 
-.warning {
-    margin-top: 12px;
-    border-radius: 10px;
-    padding: 8px;
-    text-align: center;
-    font-size: 0.73rem;
-    font-weight: 700;
-    letter-spacing: 0.15em;
-    background: rgba(255, 76, 76, 0.18);
-    border: 1px solid rgba(255, 90, 90, 0.45);
-    color: #ffaaaa;
+/* Vignette: default OFF (invisible) */
+#sal-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at center, rgba(0,0,0,0) 56%, rgba(0,0,0,0.55) 100%);
+  opacity: 0;
+  transition: opacity 180ms ease;
 }
 
-.warning.flash { animation: flash 0.8s ease-in-out infinite; }
-
-.vignette {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 220ms ease;
-    background: radial-gradient(circle at center, rgba(0, 0, 0, 0) 45%, rgba(0, 0, 0, 0.45) 100%);
-}
-
-.vignette.active { opacity: 0.35; }
-.hidden { display: none; }
-
-@keyframes flash {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.45; }
-}
+/* When ON, only then visible */
+.vignette-on { opacity: 0.35; }
+.vignette-off { opacity: 0; }

@@ -53,6 +53,34 @@ local function setSubmixEnabled(enabled)
     end
 end
 
+
+local function NuiHardHide()
+    SetNuiFocus(false, false)
+    SetNuiFocusKeepInput(false)
+
+    SendNUIMessage({ type = 'scba:hardHide' })
+    SendNUIMessage({ type = 'scba:visibility', visible = false, hud = false })
+    SendNUIMessage({
+        type = 'scba:update',
+        hud = false,
+        maskOn = false,
+        pressure = 0,
+        maxPressure = Config.SCBA.MaxPressure,
+        unit = '',
+        status = '',
+        warn = ''
+    })
+end
+
+CreateThread(function()
+    Wait(0)
+    NuiHardHide()
+    Wait(150)
+    NuiHardHide()
+    Wait(600)
+    NuiHardHide()
+end)
+
 local function updateLowAirState()
     local p = State.pressure
     local nextState = 'none'
@@ -404,6 +432,7 @@ AddEventHandler('onClientResourceStart', function(res)
         return
     end
 
+    NuiHardHide()
     UI:Reset()
     Visuals:ResetToCurrentPedOutfit()
     TriggerServerEvent('sal_scba:server:syncMe')
@@ -428,6 +457,7 @@ AddEventHandler('onClientResourceStop', function(res)
 
     Visuals:RestoreOriginalOutfit(false)
     setSubmixEnabled(false)
+    NuiHardHide()
     UI:Reset()
 end)
 

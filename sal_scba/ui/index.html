@@ -1,40 +1,39 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>sal_scba HUD</title>
-    <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <title>SAL SCBA</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
-    <div id="scba-root" class="scba-root hidden" aria-hidden="true">
-        <div id="vignette" class="vignette"></div>
+  <!-- Root wrapper is ALWAYS hidden unless explicitly enabled by Lua message -->
+  <div id="sal-root" aria-hidden="true">
+    <div id="sal-hud" class="hidden">
+      <div id="sal-card">
+        <div id="sal-row">
+          <div id="sal-title">SCBA</div>
+          <div id="sal-status"></div>
+        </div>
 
-        <aside id="hudCard" class="hud-card hidden">
-            <header>
-                <p class="label">SCBA</p>
-                <p id="status" class="status status-none">READY</p>
-            </header>
+        <div id="sal-bar-wrap">
+          <div id="sal-bar"></div>
+        </div>
 
-            <section class="pressure-section">
-                <div class="pressure-meta">
-                    <span>Pressure</span>
-                    <span id="pressureValue">0 / 100</span>
-                </div>
-                <div class="bar-wrap">
-                    <div id="bar" class="bar-fill"></div>
-                </div>
-            </section>
+        <div id="sal-meta">
+          <span id="sal-pressure">0</span>
+          <span id="sal-unit"></span>
+        </div>
 
-            <section class="flags">
-                <div id="maskFlag" class="flag">MASK</div>
-                <div id="passFlag" class="flag">PASS</div>
-            </section>
-
-            <div id="warnBanner" class="warning hidden">LOW AIR</div>
-        </aside>
+        <div id="sal-warn" class="hidden"></div>
+      </div>
     </div>
 
-    <script src="app.js"></script>
+    <!-- Vignette is separate and default fully invisible -->
+    <div id="sal-vignette" class="vignette-off"></div>
+  </div>
+
+  <script src="app.js"></script>
 </body>
 </html>
