@@ -9,6 +9,15 @@ npm install
 npm run dev
 ```
 
+> Wichtig: **nicht** die `index.html` per Doppelklick öffnen. Das ist eine Vite-App und muss über den Dev-Server laufen.
+
+## Bei weißer Seite (Troubleshooting)
+
+1. Prüfen, ob du die Datei direkt per `file://.../index.html` geöffnet hast.
+2. Falls ja: Terminal im Ordner `marketplan-editor` öffnen.
+3. `npm install` und danach `npm run dev` ausführen.
+4. Die im Terminal angezeigte URL (meist `http://localhost:5173`) im Browser öffnen.
+
 ## MVP-Funktionen
 
 - Neues Projekt mit rechteckigem Grundriss in **cm**

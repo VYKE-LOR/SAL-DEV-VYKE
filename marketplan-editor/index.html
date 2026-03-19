@@ -1,12 +1,41 @@
 <!doctype html>
-<html lang="en">
+<html lang="de">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Marketplan Editor MVP</title>
+    <style>
+      body { margin: 0; background: #0f172a; color: #e2e8f0; font-family: Inter, system-ui, sans-serif; }
+      .boot-message { max-width: 760px; margin: 10vh auto; padding: 24px; border: 1px solid #334155; border-radius: 12px; background: #111827; }
+      .boot-message code { background: #1f2937; padding: 2px 6px; border-radius: 6px; }
+    </style>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module">
+      const root = document.getElementById('root');
+      const showBootMessage = (extra = '') => {
+        if (!root) return;
+        root.innerHTML = `
+          <div class="boot-message">
+            <h2>Marketplan Editor starten</h2>
+            <p>Diese App ist eine Vite/React-Anwendung und läuft nicht durch direktes Öffnen der <code>index.html</code> Datei.</p>
+            <p>Bitte im Projektordner starten mit:</p>
+            <pre><code>npm install\nnpm run dev</code></pre>
+            <p>Danach die angezeigte lokale URL (z. B. <code>http://localhost:5173</code>) im Browser öffnen.</p>
+            ${extra ? `<p><strong>Hinweis:</strong> ${extra}</p>` : ''}
+          </div>
+        `;
+      };
+
+      if (window.location.protocol === 'file:') {
+        showBootMessage('Du hast die Datei vermutlich direkt per Doppelklick geöffnet.');
+      } else {
+        import('/src/main.tsx').catch((error) => {
+          console.error(error);
+          showBootMessage('Der Dev-Server läuft nicht oder die App konnte nicht geladen werden.');
+        });
+      }
+    </script>
   </body>
 </html>
