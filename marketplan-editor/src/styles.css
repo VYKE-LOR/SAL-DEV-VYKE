@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  @apply bg-slate-900 text-slate-100;
+}
+
+input,
+button,
+select {
+  @apply rounded border border-slate-700 bg-slate-800 px-2 py-1 text-sm;
+}
+
+button {
+  @apply transition hover:bg-slate-700;
+}
