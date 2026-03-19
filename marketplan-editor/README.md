@@ -22,6 +22,7 @@ npm run dev
 
 - Neues Projekt mit rechteckigem Grundriss in **cm**
 - Grid + Snap-to-Grid
+- Professionelles Wandwerkzeug (Klick+Ziehen, Wandstärken, Live-Länge/Winkel)
 - Objektbibliothek (Regale, Kühlmöbel, Kassen ...)
 - Drag & Drop aus Bibliothek auf Canvas
 - Auswahl, Multi-Select (Shift-Klick), Drag, Resize, Rotate

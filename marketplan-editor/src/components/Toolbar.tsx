@@ -1,6 +1,8 @@
 import { useRef } from 'react';
 import { useEditorStore } from '../store/editorStore';
 
+const WALL_THICKNESSES = [5, 7.5, 10, 11.5, 17.5, 24];
+
 export const Toolbar = (): JSX.Element => {
   const {
     undo,
@@ -13,6 +15,8 @@ export const Toolbar = (): JSX.Element => {
     toggleSnap,
     setZoom,
     importDocument,
+    setTool,
+    setWallThickness,
   } = useEditorStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -43,11 +47,49 @@ export const Toolbar = (): JSX.Element => {
         onChange={(event) => {
           const file = event.target.files?.[0];
           if (!file) return;
-          file.text().then((text) => {
-            importDocument(JSON.parse(text));
-          });
+          file.text().then((text) => importDocument(JSON.parse(text)));
         }}
       />
+
+      <div className="ml-3 flex items-center gap-2 border-l border-slate-700 pl-3">
+        <button
+          className={present.settings.tool === 'select' ? 'bg-accent text-slate-900 hover:bg-sky-400' : ''}
+          onClick={() => setTool('select')}
+        >
+          Auswahl
+        </button>
+        <button
+          className={present.settings.tool === 'wall' ? 'bg-accent text-slate-900 hover:bg-sky-400' : ''}
+          onClick={() => setTool('wall')}
+        >
+          Wand
+        </button>
+        <label>Wandstärke</label>
+        <select
+          value={WALL_THICKNESSES.includes(present.settings.wallThicknessCm) ? present.settings.wallThicknessCm : 'custom'}
+          onChange={(event) => {
+            const value = event.target.value;
+            if (value === 'custom') return;
+            setWallThickness(Number(value));
+          }}
+        >
+          {WALL_THICKNESSES.map((value) => (
+            <option key={value} value={value}>
+              {value} cm
+            </option>
+          ))}
+          <option value="custom">frei</option>
+        </select>
+        <input
+          className="w-20"
+          type="number"
+          min={3}
+          step={0.5}
+          value={present.settings.wallThicknessCm}
+          onChange={(event) => setWallThickness(Number(event.target.value))}
+        />
+      </div>
+
       <div className="ml-auto flex items-center gap-2">
         <label>Raster cm</label>
         <input

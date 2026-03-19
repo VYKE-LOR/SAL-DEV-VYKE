@@ -13,6 +13,8 @@ export type Category =
   | 'Leergutbereich'
   | 'Lagerelemente';
 
+export type EditorTool = 'select' | 'wall';
+
 export interface Size3D {
   widthCm: number;
   depthCm: number;
@@ -31,6 +33,23 @@ export interface PlanObject extends Size3D {
   metadata?: Record<string, string | number | boolean>;
 }
 
+export interface Wall {
+  id: string;
+  type: 'wall';
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  thicknessCm: number;
+  lengthCm: number;
+  angleDeg: number;
+  material?: string;
+  color: string;
+  locked: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface ObjectTemplate extends Size3D {
   id: string;
   name: string;
@@ -44,6 +63,7 @@ export interface FloorPlan {
   widthCm: number;
   heightCm: number;
   objects: PlanObject[];
+  walls: Wall[];
 }
 
 export interface Project {
@@ -61,6 +81,8 @@ export interface EditorSettings {
   zoom: number;
   pan: { x: number; y: number };
   pixelsPerCm: number;
+  tool: EditorTool;
+  wallThicknessCm: number;
 }
 
 export interface EditorDocument {
